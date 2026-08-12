@@ -10,8 +10,8 @@ export async function getMenuItemById(id) {
   return res.data;
 }
 
-export async function createMenuItem({ name, description, price, category, available }) {
-  const res = await client.post('/menu', { name, description, price, category, available });
+export async function createMenuItem({ name, description, price, category, available, image }) {
+  const res = await client.post('/menu', { name, description, price, category, available, image });
   return res.data;
 }
 

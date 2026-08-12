@@ -1,20 +1,9 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  UtensilsCrossed, Wallet, Receipt, ShoppingCart, User,
-  Menu as MenuIcon, X, LogOut,
-} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Menu as MenuIcon, X, LogOut, Flame } from 'lucide-react';
 import { colors, font, radius, spacing } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
-
-// Customer-facing nav only. Admin/staff use AdminLayout + Sidebar instead.
-const NAV = [
-  { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
-  { to: '/order', label: 'Order', icon: ShoppingCart },
-  { to: '/wallet', label: 'Wallet', icon: Wallet },
-  { to: '/transactions', label: 'Transactions', icon: Receipt },
-  { to: '/profile', label: 'Profile', icon: User },
-];
+import Sidebar, { NAV_ITEMS } from './Sidebar';
 
 function useIsMobile(bp = 900) {
   const [m, setM] = useState(
@@ -28,11 +17,14 @@ function useIsMobile(bp = 900) {
   return m;
 }
 
-export default function AppLayout({ title, action, children }) {
+// Wraps Sidebar (desktop-only, admin/staff) with a responsive shell —
+// mirrors AppLayout's mobile header + drawer so admin/staff pages behave
+// the same on small screens as the customer-facing pages do.
+export default function AdminLayout({ title, action, children }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const items = NAV_ITEMS.filter((i) => user && i.roles.includes(user.role));
 
   useEffect(() => { if (!isMobile) setOpen(false); }, [isMobile]);
   useEffect(() => {
@@ -56,25 +48,14 @@ export default function AppLayout({ title, action, children }) {
         width: 32, height: 32, flexShrink: 0, display: 'grid', placeItems: 'center',
         borderRadius: radius.sm, background: colors.accent,
       }}>
-        <UtensilsCrossed size={18} color="#fff" />
+        <Flame size={18} color="#fff" />
       </div>
       <span style={{
         fontFamily: font.display, fontWeight: 700, fontSize: '16px',
         color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-      }}>Canteen</span>
+      }}>Rustico</span>
     </div>
-  );
-
-  const navLinks = (
-    <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing(1) }}>
-      {NAV.map(({ to, label, icon: Icon }) => (
-        <NavLink key={to} to={to} style={linkStyle} onClick={() => setOpen(false)}>
-          <Icon size={18} style={{ flexShrink: 0 }} />
-          {label}
-        </NavLink>
-      ))}
-    </nav>
   );
 
   return (
@@ -82,36 +63,18 @@ export default function AppLayout({ title, action, children }) {
       minHeight: '100vh', background: colors.bg, color: colors.textPrimary,
       fontFamily: font.body, display: 'flex',
     }}>
-      {/* Desktop sidebar */}
-      {!isMobile && (
-        <aside style={{
-          width: 240, flexShrink: 0, borderRight: `1px solid ${colors.border}`,
-          background: colors.panel, padding: spacing(5),
-          display: 'flex', flexDirection: 'column', gap: spacing(6),
-          position: 'sticky', top: 0, height: '100vh',
-        }}>
-          {Brand}
-          {navLinks}
-          <button onClick={logout} style={{
-            marginTop: 'auto', display: 'flex', alignItems: 'center', gap: spacing(2),
-            background: 'transparent', border: `1px solid ${colors.border}`,
-            color: colors.textMuted, borderRadius: radius.md,
-            padding: spacing(3), cursor: 'pointer', fontFamily: font.body,
-          }}>
-            <LogOut size={16} /> Log out
-          </button>
-        </aside>
-      )}
+      {/* Desktop: reuse Sidebar as-is */}
+      {!isMobile && <Sidebar />}
 
       {/* Main column */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <header style={{
-          position: 'sticky', top: 0, zIndex: 30,
-          display: 'flex', alignItems: 'center', gap: spacing(3),
-          padding: `${spacing(3)} ${spacing(4)}`,
-          background: colors.panel, borderBottom: `1px solid ${colors.border}`,
-        }}>
-          {isMobile && (
+        {isMobile && (
+          <header style={{
+            position: 'sticky', top: 0, zIndex: 30,
+            display: 'flex', alignItems: 'center', gap: spacing(3),
+            padding: `${spacing(3)} ${spacing(4)}`,
+            background: colors.panel, borderBottom: `1px solid ${colors.border}`,
+          }}>
             <button
               aria-label="Open menu"
               onClick={() => setOpen(true)}
@@ -123,20 +86,18 @@ export default function AppLayout({ title, action, children }) {
             >
               <MenuIcon size={20} />
             </button>
-          )}
-          <h1 style={{
-            flex: 1, minWidth: 0, margin: 0,
-            fontFamily: font.display, fontWeight: 700,
-            fontSize: isMobile ? '17px' : '20px',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{title}</h1>
-          {action && <div style={{ flexShrink: 0 }}>{action}</div>}
-        </header>
+            <h1 style={{
+              flex: 1, minWidth: 0, margin: 0,
+              fontFamily: font.display, fontWeight: 700, fontSize: '17px',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{title}</h1>
+            {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+          </header>
+        )}
 
         <main style={{
           flex: 1, width: '100%', maxWidth: 1100, margin: '0 auto',
           padding: isMobile ? spacing(4) : spacing(6),
-          paddingBottom: isMobile ? 96 : spacing(8), // clear bottom bar
           boxSizing: 'border-box',
         }}>
           {children}
@@ -165,7 +126,14 @@ export default function AppLayout({ title, action, children }) {
                 <X size={20} />
               </button>
             </div>
-            {navLinks}
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing(1) }}>
+              {items.map(({ to, label, Icon }) => (
+                <NavLink key={to} to={to} style={linkStyle} onClick={() => setOpen(false)}>
+                  <Icon size={18} style={{ flexShrink: 0 }} />
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
             <button onClick={() => { setOpen(false); logout(); }} style={{
               marginTop: 'auto', display: 'flex', alignItems: 'center', gap: spacing(2),
               background: 'transparent', border: `1px solid ${colors.border}`,
@@ -176,30 +144,6 @@ export default function AppLayout({ title, action, children }) {
             </button>
           </aside>
         </>
-      )}
-
-      {/* Mobile bottom tab bar */}
-      {isMobile && (
-        <nav style={{
-          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 35,
-          display: 'grid', gridTemplateColumns: `repeat(${NAV.length}, 1fr)`,
-          background: colors.panel, borderTop: `1px solid ${colors.border}`,
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} style={({ isActive }) => ({
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 4, padding: `${spacing(2)} 0`, textDecoration: 'none',
-              color: isActive ? colors.accent : colors.textMuted,
-              fontSize: '10px', fontFamily: font.body, minWidth: 0,
-            })}>
-              <Icon size={18} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-                {label}
-              </span>
-            </NavLink>
-          ))}
-        </nav>
       )}
     </div>
   );

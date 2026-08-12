@@ -13,6 +13,8 @@ import PlaceOrder from './pages/PlaceOrder';
 import Orders from './pages/Orders';
 import Checkout from './pages/Checkout';
 import TransactionHistory from './pages/TransactionHistory';
+import Wallet from './pages/Wallet';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute roles={['admin', 'staff']}><Checkout /></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute roles={['customer']}><Wallet /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/menu" replace />} />
           </Routes>
