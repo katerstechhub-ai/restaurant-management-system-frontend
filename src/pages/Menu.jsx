@@ -174,7 +174,7 @@ export default function Menu() {
                 </div>
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px' }}>
                   <div style={{ color: colors.accent, fontWeight: 700, fontSize: '16px' }}>
-                    ${Number(item.price).toFixed(2)}
+                    ₦{Number(item.price).toFixed(2)}
                   </div>
                   {isCustomer && item.available && (
                     <Button style={{ padding: '8px 14px' }} onClick={() => cartCtx.addItem(item)}>

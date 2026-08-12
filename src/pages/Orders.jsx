@@ -4,6 +4,7 @@ import { getOrders, updateOrderStatus } from '../api/orders';
 import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
+import AdminLayout from '../components/AdminLayout';
 import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState, Thumb } from '../components/ui';
 
 const STATUSES = ['pending', 'in-progress', 'completed'];
@@ -14,6 +15,7 @@ export default function Orders() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const canManage = user && (user.role === 'admin' || user.role === 'staff');
+  const Layout = canManage ? AdminLayout : AppLayout;
 
   const load = () => {
     getOrders()
@@ -37,7 +39,7 @@ export default function Orders() {
   const counts = STATUSES.map((s) => ({ status: s, n: orders.filter((o) => o.status === s).length }));
 
   return (
-    <AppLayout>
+    <Layout title={canManage ? 'Orders' : 'Your orders'}>
       <PageTitle subtitle={`${orders.length} orders in the system`}>
         {canManage ? 'Orders' : 'Your orders'}
       </PageTitle>
@@ -81,7 +83,7 @@ export default function Orders() {
                 <div style={{ display: 'flex', gap: '-8px' }}>
                   {order.items.slice(0, 3).map((it, idx) => (
                     <div key={idx} style={{ marginLeft: idx === 0 ? 0 : '-14px' }}>
-                      <Thumb src={it.menuItem && it.menuItem.imageUrl} alt={(it.menuItem && it.menuItem.name) || 'Item'} size={48} />
+                      <Thumb src={it.menuItem && it.menuItem.image} alt={(it.menuItem && it.menuItem.name) || 'Item'} size={48} />
                     </div>
                   ))}
                 </div>
@@ -99,7 +101,7 @@ export default function Orders() {
                     {order.orderType === 'delivery' ? <Bike size={13} /> : <UtensilsCrossed size={13} />}
                     <span style={{ textTransform: 'capitalize' }}>{order.orderType}</span>
                     <span>·</span>
-                    <span style={{ color: colors.accent, fontWeight: 700 }}>${Number(order.totalAmount).toFixed(2)}</span>
+                    <span style={{ color: colors.accent, fontWeight: 700 }}>₦{Number(order.totalAmount).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -122,6 +124,6 @@ export default function Orders() {
           </Card>
         ))
       )}
-    </AppLayout>
+    </Layout>
   );
 }

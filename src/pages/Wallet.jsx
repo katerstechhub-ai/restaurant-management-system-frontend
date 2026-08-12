@@ -61,7 +61,7 @@ export default function Wallet() {
               <div>
                 <div style={{ color: colors.textMuted, fontSize: '12px' }}>Current balance</div>
                 <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: '26px' }}>
-                  {balance === null ? '—' : `$${Number(balance).toFixed(2)}`}
+                  {balance === null ? '—' : `₦${Number(balance).toFixed(2)}`}
                 </div>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function Wallet() {
                   fontWeight: 700,
                   color: tx.type === 'topup' ? (colors.success ?? '#3fb950') : colors.accent,
                 }}>
-                  {tx.type === 'topup' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
+                  {tx.type === 'topup' ? '+' : '-'}₦{Number(tx.amount).toFixed(2)}
                 </div>
               </div>
             ))
