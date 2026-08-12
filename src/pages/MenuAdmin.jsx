@@ -171,7 +171,7 @@ export default function MenuAdmin() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600 }}>{item.name}</div>
                   <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '4px' }}>
-                    {item.category || 'Uncategorized'} · ${Number(item.price).toFixed(2)} ·{' '}
+                    {item.category || 'Uncategorized'} · ₦{Number(item.price).toFixed(2)} ·{' '}
                     <span style={{ color: item.available ? colors.success : colors.accent }}>
                       {item.available ? 'Available' : 'Unavailable'}
                     </span>

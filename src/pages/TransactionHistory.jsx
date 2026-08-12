@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Banknote, CreditCard, Smartphone, Receipt } from 'lucide-react';
 import { getTransactions } from '../api/billing';
+import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
+import AdminLayout from '../components/AdminLayout';
 import { Card, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
 
 const METHOD_ICONS = { cash: Banknote, card: CreditCard, mobile: Smartphone };
 
 export default function TransactionHistory() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const isStaffOrAdmin = user && (user.role === 'admin' || user.role === 'staff');
+  const Layout = isStaffOrAdmin ? AdminLayout : AppLayout;
 
   useEffect(() => {
     getTransactions()
@@ -24,8 +29,8 @@ export default function TransactionHistory() {
     .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0);
 
   return (
-    <AppLayout>
-      <PageTitle subtitle={`${transactions.length} records · $${revenue.toFixed(2)} collected`}>
+    <Layout title="Transaction history">
+      <PageTitle subtitle={`${transactions.length} records · ₦${revenue.toFixed(2)} collected`}>
         Transaction history
       </PageTitle>
 
@@ -70,7 +75,7 @@ export default function TransactionHistory() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: '15px' }}>
-                    ${Number(tx.totalAmount).toFixed(2)}
+                    ₦{Number(tx.totalAmount).toFixed(2)}
                   </div>
                   <StatusPill status={tx.status} color={statusColor(tx.status)} />
                 </div>
@@ -79,6 +84,6 @@ export default function TransactionHistory() {
           );
         })
       )}
-    </AppLayout>
+    </Layout>
   );
 }

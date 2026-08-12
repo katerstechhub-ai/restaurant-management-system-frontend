@@ -3,7 +3,7 @@ import { Banknote, CreditCard, Smartphone, RotateCcw, CheckCircle2 } from 'lucid
 import { getOrders } from '../api/orders';
 import { generateBill, processPayment } from '../api/billing';
 import { colors, statusColor, radius, font } from '../styles/tokens';
-import AppLayout from '../components/AppLayout';
+import AdminLayout from '../components/AdminLayout';
 import { Card, Button, Select, Input, StatusPill, PageTitle, ErrorText } from '../components/ui';
 
 const METHODS = [
@@ -65,7 +65,7 @@ export default function Checkout() {
   };
 
   return (
-    <AppLayout>
+    <AdminLayout title="Checkout">
       <PageTitle subtitle="Generate a bill and take payment">Checkout</PageTitle>
 
       <Card style={{ maxWidth: '460px', padding: '24px' }}>
@@ -75,7 +75,7 @@ export default function Checkout() {
               <option value="">Select an order…</option>
               {orders.map((order) => (
                 <option key={order._id} value={order._id}>
-                  #{order._id.slice(-6)} · ${Number(order.totalAmount).toFixed(2)} · {order.status}
+                  #{order._id.slice(-6)} · ₦{Number(order.totalAmount).toFixed(2)} · {order.status}
                 </option>
               ))}
             </Select>
@@ -124,9 +124,9 @@ export default function Checkout() {
           </>
         ) : (
           <>
-            <Row label="Subtotal" value={`$${Number(payment.subtotal).toFixed(2)}`} />
-            <Row label="Discount" value={`-$${Number(payment.discount).toFixed(2)}`} />
-            <Row label="Extra charges" value={`+$${Number(payment.extraCharges).toFixed(2)}`} />
+            <Row label="Subtotal" value={`₦${Number(payment.subtotal).toFixed(2)}`} />
+            <Row label="Discount" value={`-₦${Number(payment.discount).toFixed(2)}`} />
+            <Row label="Extra charges" value={`+₦${Number(payment.extraCharges).toFixed(2)}`} />
 
             <div
               style={{
@@ -140,7 +140,7 @@ export default function Checkout() {
             >
               <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: '15px' }}>TOTAL</span>
               <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: '24px' }}>
-                ${Number(payment.totalAmount).toFixed(2)}
+                ₦{Number(payment.totalAmount).toFixed(2)}
               </span>
             </div>
 
@@ -170,6 +170,6 @@ export default function Checkout() {
           </>
         )}
       </Card>
-    </AppLayout>
+    </AdminLayout>
   );
 }

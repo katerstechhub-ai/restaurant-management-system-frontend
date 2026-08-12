@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   UtensilsCrossed, Wallet, Receipt, ShoppingCart, User,
-  Menu as MenuIcon, X, LogOut,
+  Menu as MenuIcon, X, LogOut, Flame, Settings, Bell,
 } from 'lucide-react';
-import { colors, font, radius, spacing } from '../styles/tokens';
+import { colors, font, radius, spacing, shadow } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
 
 // Customer-facing nav only. Admin/staff use AdminLayout + Sidebar instead.
 const NAV = [
-  { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
-  { to: '/order', label: 'Order', icon: ShoppingCart },
-  { to: '/wallet', label: 'Wallet', icon: Wallet },
-  { to: '/transactions', label: 'Transactions', icon: Receipt },
-  { to: '/profile', label: 'Profile', icon: User },
+  { to: '/menu', label: 'Menu', Icon: UtensilsCrossed },
+  { to: '/order', label: 'Order', Icon: ShoppingCart },
+  { to: '/wallet', label: 'Wallet', Icon: Wallet },
+  { to: '/transactions', label: 'Transactions', Icon: Receipt },
+  { to: '/profile', label: 'Profile', Icon: User },
 ];
 
 function useIsMobile(bp = 900) {
@@ -28,6 +28,45 @@ function useIsMobile(bp = 900) {
   return m;
 }
 
+function NavItem({ item, onClick }) {
+  const { Icon, label, to } = item;
+  return (
+    <NavLink
+      to={to}
+      title={label}
+      onClick={onClick}
+      style={({ isActive }) => ({
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        padding: '11px 14px',
+        borderRadius: radius.sm,
+        textDecoration: 'none',
+        color: isActive ? colors.accent : colors.textMuted,
+        background: isActive ? colors.accentSoft : 'transparent',
+        fontFamily: font.body,
+        fontSize: '13px',
+        fontWeight: isActive ? 700 : 500,
+        transition: 'all .15s ease',
+      })}
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={18} strokeWidth={2} />
+          <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+          {isActive && (
+            <span style={{
+              position: 'absolute', right: '10px', width: '6px', height: '6px',
+              borderRadius: '50%', background: colors.accent,
+            }} />
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 export default function AppLayout({ title, action, children }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -40,41 +79,30 @@ export default function AppLayout({ title, action, children }) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const linkStyle = ({ isActive }) => ({
-    display: 'flex', alignItems: 'center', gap: spacing(3),
-    padding: `${spacing(3)} ${spacing(4)}`,
-    borderRadius: radius.md,
-    color: isActive ? colors.textPrimary : colors.textMuted,
-    background: isActive ? colors.panelAlt : 'transparent',
-    textDecoration: 'none', fontFamily: font.body, fontWeight: 500,
-    fontSize: '14px', whiteSpace: 'nowrap',
-  });
+  const iconBtn = {
+    width: '38px', height: '38px', borderRadius: '50%',
+    border: `1px solid ${colors.border}`, background: colors.panelAlt,
+    color: colors.textMuted, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
 
   const Brand = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: spacing(2), minWidth: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
       <div style={{
-        width: 32, height: 32, flexShrink: 0, display: 'grid', placeItems: 'center',
-        borderRadius: radius.sm, background: colors.accent,
+        width: '42px', height: '42px', borderRadius: '14px',
+        background: `linear-gradient(140deg, ${colors.accent}, #ff8a3d)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: shadow.glow, flexShrink: 0,
       }}>
-        <UtensilsCrossed size={18} color="#fff" />
+        <Flame size={22} color="#fff" strokeWidth={2.2} />
       </div>
-      <span style={{
-        fontFamily: font.display, fontWeight: 700, fontSize: '16px',
-        color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}>Canteen</span>
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.text, fontSize: '15px' }}>Rustico</div>
+        <div style={{ color: colors.textMuted, fontSize: '11px', textTransform: 'capitalize' }}>
+          {user ? user.role : 'Guest'}
+        </div>
+      </div>
     </div>
-  );
-
-  const navLinks = (
-    <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing(1) }}>
-      {NAV.map(({ to, label, icon: Icon }) => (
-        <NavLink key={to} to={to} style={linkStyle} onClick={() => setOpen(false)}>
-          <Icon size={18} style={{ flexShrink: 0 }} />
-          {label}
-        </NavLink>
-      ))}
-    </nav>
   );
 
   return (
@@ -82,24 +110,32 @@ export default function AppLayout({ title, action, children }) {
       minHeight: '100vh', background: colors.bg, color: colors.textPrimary,
       fontFamily: font.body, display: 'flex',
     }}>
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — matches Sidebar.jsx styling */}
       {!isMobile && (
         <aside style={{
-          width: 240, flexShrink: 0, borderRight: `1px solid ${colors.border}`,
-          background: colors.panel, padding: spacing(5),
-          display: 'flex', flexDirection: 'column', gap: spacing(6),
-          position: 'sticky', top: 0, height: '100vh',
+          width: '224px', flexShrink: 0, height: '100vh', position: 'sticky', top: 0,
+          padding: '26px 16px', display: 'flex', flexDirection: 'column',
+          background: colors.panel, borderRight: `1px solid ${colors.border}`,
+          borderRadius: `${radius.lg} 0 0 ${radius.lg}`, backdropFilter: 'blur(18px)',
+          fontFamily: font.body,
         }}>
-          {Brand}
-          {navLinks}
-          <button onClick={logout} style={{
-            marginTop: 'auto', display: 'flex', alignItems: 'center', gap: spacing(2),
-            background: 'transparent', border: `1px solid ${colors.border}`,
-            color: colors.textMuted, borderRadius: radius.md,
-            padding: spacing(3), cursor: 'pointer', fontFamily: font.body,
-          }}>
-            <LogOut size={16} /> Log out
-          </button>
+          <div style={{ padding: '0 8px', marginBottom: '34px' }}>{Brand}</div>
+
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+            {NAV.map((item) => <NavItem key={item.to} item={item} />)}
+          </nav>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '18px', borderTop: `1px solid ${colors.border}` }}>
+            <button style={iconBtn} title="Settings"><Settings size={17} /></button>
+            <button style={iconBtn} title="Notifications"><Bell size={17} /></button>
+            <button
+              onClick={logout}
+              title="Log out"
+              style={{ ...iconBtn, marginLeft: 'auto', background: colors.accentSoft, color: colors.accent, borderColor: 'transparent' }}
+            >
+              <LogOut size={17} />
+            </button>
+          </div>
         </aside>
       )}
 
@@ -143,7 +179,7 @@ export default function AppLayout({ title, action, children }) {
         </main>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — matches Sidebar.jsx styling */}
       {isMobile && open && (
         <>
           <div
@@ -153,27 +189,34 @@ export default function AppLayout({ title, action, children }) {
           <aside style={{
             position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
             width: 'min(80vw, 280px)', background: colors.panel,
-            borderRight: `1px solid ${colors.border}`, padding: spacing(5),
-            display: 'flex', flexDirection: 'column', gap: spacing(6),
+            borderRight: `1px solid ${colors.border}`, padding: '26px 16px',
+            display: 'flex', flexDirection: 'column', fontFamily: font.body,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: '34px' }}>
               {Brand}
               <button aria-label="Close menu" onClick={() => setOpen(false)} style={{
                 background: 'transparent', border: 'none', color: colors.textMuted,
-                cursor: 'pointer', lineHeight: 0,
+                cursor: 'pointer', lineHeight: 0, flexShrink: 0,
               }}>
                 <X size={20} />
               </button>
             </div>
-            {navLinks}
-            <button onClick={() => { setOpen(false); logout(); }} style={{
-              marginTop: 'auto', display: 'flex', alignItems: 'center', gap: spacing(2),
-              background: 'transparent', border: `1px solid ${colors.border}`,
-              color: colors.textMuted, borderRadius: radius.md,
-              padding: spacing(3), cursor: 'pointer', fontFamily: font.body,
-            }}>
-              <LogOut size={16} /> Log out
-            </button>
+
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+              {NAV.map((item) => <NavItem key={item.to} item={item} onClick={() => setOpen(false)} />)}
+            </nav>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '18px', borderTop: `1px solid ${colors.border}` }}>
+              <button style={iconBtn} title="Settings"><Settings size={17} /></button>
+              <button style={iconBtn} title="Notifications"><Bell size={17} /></button>
+              <button
+                onClick={() => { setOpen(false); logout(); }}
+                title="Log out"
+                style={{ ...iconBtn, marginLeft: 'auto', background: colors.accentSoft, color: colors.accent, borderColor: 'transparent' }}
+              >
+                <LogOut size={17} />
+              </button>
+            </div>
           </aside>
         </>
       )}
@@ -186,7 +229,7 @@ export default function AppLayout({ title, action, children }) {
           background: colors.panel, borderTop: `1px solid ${colors.border}`,
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {NAV.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} style={({ isActive }) => ({
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: 4, padding: `${spacing(2)} 0`, textDecoration: 'none',
