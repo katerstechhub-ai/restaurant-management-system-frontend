@@ -6,7 +6,7 @@ import { colors, radius, font } from '../styles/tokens';
 import AdminLayout from '../components/AdminLayout';
 import { Card, Button, Input, PageTitle, ErrorText, Thumb, EmptyState } from '../components/ui';
 
-const EMPTY_FORM = { name: '', description: '', price: '', category: '', image: '', available: true };
+const EMPTY_FORM = { name: '', description: '', price: '', category: '', image: '', prepTimeMinutes: '', available: true };
 
 export default function MenuAdmin() {
   const [items, setItems] = useState([]);
@@ -59,6 +59,7 @@ export default function MenuAdmin() {
         price: Number(form.price),
         category: form.category,
         image: form.image,
+        prepTimeMinutes: form.prepTimeMinutes === '' ? undefined : Number(form.prepTimeMinutes),
         available: form.available,
       };
       if (editingId) await updateMenuItem(editingId, payload);
@@ -80,6 +81,7 @@ export default function MenuAdmin() {
       price: String(item.price),
       category: item.category || '',
       image: item.image || '',
+      prepTimeMinutes: item.prepTimeMinutes !== undefined && item.prepTimeMinutes !== null ? String(item.prepTimeMinutes) : '',
       available: item.available,
     });
   };
@@ -149,6 +151,14 @@ export default function MenuAdmin() {
               <Input label="Price" type="number" step="0.01" min="0" value={form.price} onChange={setField('price')} required />
               <Input label="Category" value={form.category} onChange={setField('category')} />
             </div>
+            <Input
+              label="Prep time (minutes)"
+              type="number"
+              min="0"
+              placeholder="e.g. 20"
+              value={form.prepTimeMinutes}
+              onChange={setField('prepTimeMinutes')}
+            />
 
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: colors.textMuted }}>
               <input
@@ -199,7 +209,8 @@ export default function MenuAdmin() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600 }}>{item.name}</div>
                   <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '4px' }}>
-                    {item.category || 'Uncategorized'} · ₦{Number(item.price).toFixed(2)} ·{' '}
+                    {item.category || 'Uncategorized'} · ₦{Number(item.price).toFixed(2)}
+                    {item.prepTimeMinutes ? ` · ${item.prepTimeMinutes} min` : ''} ·{' '}
                     <span style={{ color: item.available ? colors.success : colors.accent }}>
                       {item.available ? 'Available' : 'Unavailable'}
                     </span>
