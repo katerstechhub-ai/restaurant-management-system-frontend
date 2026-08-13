@@ -5,9 +5,41 @@ import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
 import AdminLayout from '../components/AdminLayout';
-import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState, Thumb } from '../components/ui';
+import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
 
 const STATUSES = ['pending', 'in-progress', 'completed'];
+
+// Same treatment as the menu cards: rounded square, cropped photo, and an
+// icon medallion fallback when the item has no image.
+function ItemThumb({ src, alt, size = 52 }) {
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: radius.sm,
+        overflow: 'hidden',
+        border: `1px solid ${colors.border}`,
+        background: colors.panelAlt,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      ) : (
+        <UtensilsCrossed size={Math.round(size * 0.4)} color={colors.textMuted} />
+      )}
+    </div>
+  );
+}
 
 export default function Orders() {
   const { user } = useAuth();
@@ -80,12 +112,26 @@ export default function Orders() {
           <Card key={order._id} hover style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '14px', minWidth: 0 }}>
-                <div style={{ display: 'flex', gap: '-8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
                   {order.items.slice(0, 3).map((it, idx) => (
-                    <div key={idx} style={{ marginLeft: idx === 0 ? 0 : '-14px' }}>
-                      <Thumb src={it.menuItem && it.menuItem.image} alt={(it.menuItem && it.menuItem.name) || 'Item'} size={48} />
-                    </div>
+                    <ItemThumb
+                      key={idx}
+                      src={it.menuItem && it.menuItem.image}
+                      alt={(it.menuItem && it.menuItem.name) || 'Item'}
+                    />
                   ))}
+                  {order.items.length > 3 && (
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '11px',
+                        color: colors.textMuted,
+                        fontWeight: 600,
+                      }}
+                    >
+                      +{order.items.length - 3}
+                    </div>
+                  )}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: font.display, fontWeight: 700 }}>

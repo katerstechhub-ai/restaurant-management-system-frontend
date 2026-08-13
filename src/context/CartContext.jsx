@@ -1,9 +1,27 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext(null);
+const STORAGE_KEY = 'cart';
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]); // [{ menuItem, name, price, quantity, customizations }]
+  const [cart, setCart] = useState(loadCart); // [{ menuItem, name, price, imageUrl, quantity, customizations }]
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      // storage full or unavailable — cart just won't persist this time
+    }
+  }, [cart]);
 
   const addItem = (menuItem) => {
     const existingIndex = findIndex(cart, menuItem._id);
@@ -21,7 +39,14 @@ export function CartProvider({ children }) {
     }
     setCart([
       ...cart,
-      { menuItem: menuItem._id, name: menuItem.name, price: menuItem.price, quantity: 1, customizations: '' },
+      {
+        menuItem: menuItem._id,
+        name: menuItem.name,
+        price: menuItem.price,
+        imageUrl: menuItem.image,
+        quantity: 1,
+        customizations: '',
+      },
     ]);
   };
 
