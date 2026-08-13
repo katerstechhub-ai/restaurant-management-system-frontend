@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, Clock, Bike, UtensilsCrossed } from 'lucide-react';
+import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff } from 'lucide-react';
 import { getOrders, updateOrderStatus } from '../api/orders';
 import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
@@ -41,11 +41,40 @@ function ItemThumb({ src, alt, size = 52 }) {
   );
 }
 
+// Small pill toggle used to reveal/hide completed orders. Kept local to this
+// file since it's a one-off control, styled to match Select/StatusPill.
+function ShowCompletedToggle({ show, onToggle, count }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '9px 14px',
+        borderRadius: radius.pill,
+        border: `1px solid ${colors.border}`,
+        background: show ? `${colors.accent}15` : colors.panel,
+        color: show ? colors.accent : colors.textMuted,
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'background 0.15s ease, color 0.15s ease',
+      }}
+    >
+      {show ? <Eye size={14} /> : <EyeOff size={14} />}
+      {show ? 'Hide completed' : `Show completed (${count})`}
+    </button>
+  );
+}
+
 export default function Orders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
   const canManage = user && (user.role === 'admin' || user.role === 'staff');
   const Layout = canManage ? AdminLayout : AppLayout;
 
@@ -69,6 +98,8 @@ export default function Orders() {
   };
 
   const counts = STATUSES.map((s) => ({ status: s, n: orders.filter((o) => o.status === s).length }));
+  const completedCount = counts.find((c) => c.status === 'completed')?.n ?? 0;
+  const visibleOrders = showCompleted ? orders : orders.filter((o) => o.status !== 'completed');
 
   return (
     <Layout title={canManage ? 'Orders' : 'Your orders'}>
@@ -76,7 +107,7 @@ export default function Orders() {
         {canManage ? 'Orders' : 'Your orders'}
       </PageTitle>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '20px' }}>
         {counts.map(({ status, n }) => (
           <Card key={status} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
@@ -101,14 +132,30 @@ export default function Orders() {
         ))}
       </div>
 
+      {completedCount > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+          <ShowCompletedToggle
+            show={showCompleted}
+            onToggle={() => setShowCompleted((v) => !v)}
+            count={completedCount}
+          />
+        </div>
+      )}
+
       <ErrorText>{error}</ErrorText>
 
       {loading ? (
         <div style={{ color: colors.textMuted }}>Loading orders…</div>
       ) : orders.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No orders yet" hint="New orders will appear here in real time." />
+      ) : visibleOrders.length === 0 ? (
+        <EmptyState
+          icon={ClipboardList}
+          title="No active orders"
+          hint={`All ${completedCount} orders are completed. Toggle "Show completed" above to see them.`}
+        />
       ) : (
-        orders.map((order) => (
+        visibleOrders.map((order) => (
           <Card key={order._id} hover style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '14px', minWidth: 0 }}>

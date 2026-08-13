@@ -1,8 +1,9 @@
 import client from './client';
 
-export async function createOrder({ items, orderType, table }) {
+export async function createOrder({ items, orderType, table, payWithWallet }) {
   const body = { items, orderType };
   if (table) body.table = table;
+  if (payWithWallet) body.payWithWallet = payWithWallet;
   const res = await client.post('/orders', body);
   return res.data;
 }
