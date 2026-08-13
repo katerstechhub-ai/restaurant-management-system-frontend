@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Trash2, X, Check, ImagePlus, UtensilsCrossed } from 'lucide-react';
+import { Pencil, Trash2, X, Check, ImagePlus, UtensilsCrossed, Loader2 } from 'lucide-react';
 import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from '../api/menu';
+import { uploadImageToCloudinary } from '../api/uploads';
 import { colors, radius, font } from '../styles/tokens';
 import AdminLayout from '../components/AdminLayout';
 import { Card, Button, Input, PageTitle, ErrorText, Thumb, EmptyState } from '../components/ui';
@@ -13,6 +14,8 @@ export default function MenuAdmin() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const load = () => {
     getMenuItems().then(setItems).catch((err) => setError(err.message));
@@ -27,12 +30,22 @@ export default function MenuAdmin() {
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result) }));
-    reader.readAsDataURL(file);
+
+    setError('');
+    setUploading(true);
+    setUploadProgress(0);
+    try {
+      const url = await uploadImageToCloudinary(file, setUploadProgress);
+      setForm((f) => ({ ...f, image: url }));
+    } catch (err) {
+      setError(err.message || 'Image upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -104,17 +117,32 @@ export default function MenuAdmin() {
                   border: `1px dashed ${colors.border}`,
                   borderRadius: radius.sm,
                   padding: '18px 12px',
-                  color: colors.textMuted,
+                  color: uploading ? colors.accent : colors.textMuted,
                   fontSize: '12px',
-                  cursor: 'pointer',
+                  cursor: uploading ? 'default' : 'pointer',
+                  opacity: uploading ? 0.85 : 1,
                 }}
               >
-                <ImagePlus size={16} /> Upload image
-                <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+                {uploading ? (
+                  <>
+                    <Loader2 size={16} className="spin" style={{ animation: 'spin 0.8s linear infinite' }} />
+                    Uploading… {uploadProgress}%
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus size={16} /> Upload image
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFile}
+                  disabled={uploading}
+                  style={{ display: 'none' }}
+                />
               </label>
             </div>
 
-            <Input label="Image URL" placeholder="https://…" value={form.image} onChange={setField('image')} />
             <Input label="Name" value={form.name} onChange={setField('name')} required />
             <Input label="Description" value={form.description} onChange={setField('description')} />
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -135,7 +163,7 @@ export default function MenuAdmin() {
             <ErrorText>{error}</ErrorText>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={busy || uploading}>
                 <Check size={15} /> {editingId ? 'Save changes' : 'Add item'}
               </Button>
               {editingId && (
