@@ -22,7 +22,10 @@ client.interceptors.response.use(
       (err.response && err.response.data && err.response.data.message) ||
       err.message ||
       'Something went wrong';
-    return Promise.reject(new Error(message));
+
+    const wrapped = new Error(message);
+    wrapped.response = err.response; // preserve status/data so callers can branch on it (e.g. 402 insufficient wallet balance)
+    return Promise.reject(wrapped);
   }
 );
 
