@@ -1,16 +1,10 @@
 import client from './client';
 
-export async function getWallet() {
-  const res = await client.get('/wallet');
-  return res.data;
-}
+export const getWallet = () =>
+  client.get('/wallet').then((res) => res.data);
 
-export async function getWalletTransactions() {
-  const res = await client.get('/wallet/transactions');
-  return res.data;
-}
+export const getWalletTransactions = () =>
+  client.get('/wallet/transactions').then((res) => res.data);
 
-export async function topUpWallet({ amount, method }) {
-  const res = await client.post('/wallet/topup', { amount, method });
-  return res.data;
-}
+export const verifyTopUp = (reference) =>
+  client.post('/wallet/verify', { reference }).then((res) => res.data);

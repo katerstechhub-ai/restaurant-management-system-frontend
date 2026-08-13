@@ -100,18 +100,28 @@ export default function MenuAdmin() {
     <AdminLayout title="Manage Menu">
       <PageTitle subtitle="Create, update and retire dishes">Manage Menu</PageTitle>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 360px) 1fr', gap: '24px', alignItems: 'start' }}>
+      {/* auto-fit lets this collapse to a single column once the viewport can't
+          fit two 320px-minimum columns side by side — no media query needed */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '24px',
+          alignItems: 'start',
+        }}
+      >
         <Card>
           <h2 style={{ fontFamily: font.display, fontSize: '15px', margin: '0 0 18px' }}>
             {editingId ? 'Edit item' : 'New item'}
           </h2>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
               <Thumb src={form.image} alt="Preview" size={72} radiusPx={16} />
               <label
                 style={{
-                  flex: 1,
+                  flex: '1 1 180px',
+                  minWidth: '180px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -147,9 +157,13 @@ export default function MenuAdmin() {
 
             <Input label="Name" value={form.name} onChange={setField('name')} required />
             <Input label="Description" value={form.description} onChange={setField('description')} />
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Input label="Price" type="number" step="0.01" min="0" value={form.price} onChange={setField('price')} required />
-              <Input label="Category" value={form.category} onChange={setField('category')} />
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
+                <Input label="Price" type="number" step="0.01" min="0" value={form.price} onChange={setField('price')} required />
+              </div>
+              <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
+                <Input label="Category" value={form.category} onChange={setField('category')} />
+              </div>
             </div>
             <Input
               label="Prep time (minutes)"
@@ -172,7 +186,7 @@ export default function MenuAdmin() {
 
             <ErrorText>{error}</ErrorText>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <Button type="submit" disabled={busy || uploading}>
                 <Check size={15} /> {editingId ? 'Save changes' : 'Add item'}
               </Button>
@@ -186,7 +200,7 @@ export default function MenuAdmin() {
         </Card>
 
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
             <h2 style={{ fontFamily: font.display, fontSize: '15px', margin: 0 }}>All items</h2>
             <span style={{ color: colors.textMuted, fontSize: '12px' }}>{items.length} total</span>
           </div>
@@ -203,10 +217,11 @@ export default function MenuAdmin() {
                   gap: '14px',
                   padding: '14px 0',
                   borderBottom: `1px solid ${colors.border}`,
+                  flexWrap: 'wrap',
                 }}
               >
                 <Thumb src={item.image} alt={item.name} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: '1 1 160px', minWidth: '160px' }}>
                   <div style={{ fontWeight: 600 }}>{item.name}</div>
                   <div style={{ color: colors.textMuted, fontSize: '12px', marginTop: '4px' }}>
                     {item.category || 'Uncategorized'} · ₦{Number(item.price).toFixed(2)}
@@ -216,7 +231,7 @@ export default function MenuAdmin() {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
                   <Button variant="soft" style={{ padding: '9px 12px' }} onClick={() => startEdit(item)}>
                     <Pencil size={15} />
                   </Button>

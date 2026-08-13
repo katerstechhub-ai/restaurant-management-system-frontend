@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Wallet as WalletIcon, Plus, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
-import { getWallet, getWalletTransactions, topUpWallet } from '../api/wallet';
+import { getWallet, getWalletTransactions, verifyTopUp } from '../api/wallet';
 import { colors, font, radius } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
 import { Card, Button, Input, PageTitle, ErrorText, EmptyState } from '../components/ui';
-
-const METHODS = ['card', 'mobile', 'cash'];
+import { useAuth } from '../context/AuthContext'; // adjust to wherever you keep the logged-in user
 
 export default function Wallet() {
+  const { user } = useAuth();
   const [balance, setBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('card');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -22,8 +21,7 @@ export default function Wallet() {
 
   useEffect(load, []);
 
-  const handleTopUp = async (e) => {
-    e.preventDefault();
+  const handlePay = () => {
     setError('');
 
     const numAmount = Number(amount);
@@ -32,16 +30,30 @@ export default function Wallet() {
       return;
     }
 
-    setBusy(true);
-    try {
-      await topUpWallet({ amount: numAmount, method });
-      setAmount('');
-      load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
+    if (!window.PaystackPop) {
+      setError('Payment library not loaded. Refresh and try again.');
+      return;
     }
+
+    const handler = window.PaystackPop.setup({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: Math.round(numAmount * 100), // kobo
+      metadata: { userId: user._id },
+      callback: (response) => {
+        setBusy(true);
+        verifyTopUp(response.reference)
+          .then(() => {
+            setAmount('');
+            load();
+          })
+          .catch((err) => setError(err.message))
+          .finally(() => setBusy(false));
+      },
+      onClose: () => {},
+    });
+
+    handler.openIframe();
   };
 
   return (
@@ -69,7 +81,7 @@ export default function Wallet() {
 
           <Card>
             <h2 style={{ fontFamily: font.display, fontSize: '15px', margin: '0 0 18px' }}>Top up</h2>
-            <form onSubmit={handleTopUp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={(e) => { e.preventDefault(); handlePay(); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <Input
                 label="Amount"
                 type="number"
@@ -80,31 +92,6 @@ export default function Wallet() {
                 onChange={(e) => setAmount(e.target.value)}
                 required
               />
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: colors.textMuted, marginBottom: '8px' }}>
-                  Payment method
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {METHODS.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMethod(m)}
-                      style={{
-                        flex: 1, padding: '10px 0', borderRadius: radius.sm,
-                        border: `1px solid ${method === m ? colors.accent : colors.border}`,
-                        background: method === m ? colors.accentSoft ?? colors.panelAlt : 'transparent',
-                        color: method === m ? colors.accent : colors.textMuted,
-                        fontFamily: font.body, fontSize: '12px', fontWeight: 600,
-                        textTransform: 'capitalize', cursor: 'pointer',
-                      }}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <ErrorText>{error}</ErrorText>
 
