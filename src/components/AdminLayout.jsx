@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { Menu as MenuIcon, X, LogOut, Flame } from 'lucide-react';
 import { colors, font, radius, spacing } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
@@ -43,7 +43,7 @@ export default function AdminLayout({ title, action, children }) {
   });
 
   const Brand = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: spacing(2), minWidth: 0 }}>
+    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: spacing(2), minWidth: 0, textDecoration: 'none' }}>
       <div style={{
         width: 32, height: 32, flexShrink: 0, display: 'grid', placeItems: 'center',
         borderRadius: radius.sm, background: colors.accent,
@@ -55,7 +55,7 @@ export default function AdminLayout({ title, action, children }) {
         color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
       }}>Rustico</span>
-    </div>
+    </Link>
   );
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   UtensilsCrossed, Wallet, Receipt, ShoppingCart, User,
   Menu as MenuIcon, X, LogOut, Flame, Settings, Bell,
@@ -87,7 +87,7 @@ export default function AppLayout({ title, action, children }) {
   };
 
   const Brand = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, textDecoration: 'none' }}>
       <div style={{
         width: '42px', height: '42px', borderRadius: '14px',
         background: `linear-gradient(140deg, ${colors.accent}, #ff8a3d)`,
@@ -102,7 +102,7 @@ export default function AppLayout({ title, action, children }) {
           {user ? user.role : 'Guest'}
         </div>
       </div>
-    </div>
+    </Link>
   );
 
   return (
