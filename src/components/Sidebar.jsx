@@ -1,7 +1,8 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   UtensilsCrossed, PencilLine, ShoppingCart, ClipboardList,
   CreditCard, Receipt, LogOut, Flame, Settings, Bell,
+  CalendarDays, Grid, ChefHat, Package
 } from 'lucide-react';
 import { colors, font, radius, shadow } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
@@ -11,9 +12,13 @@ export const NAV_ITEMS = [
   { to: '/menu', label: 'Menu', Icon: UtensilsCrossed, roles: ['admin', 'staff', 'customer'] },
   { to: '/menu-admin', label: 'Manage Menu', Icon: PencilLine, roles: ['admin'] },
   { to: '/order', label: 'Order', Icon: ShoppingCart, roles: ['customer'] },
+  { to: '/reservations', label: 'Reservations', Icon: CalendarDays, roles: ['customer'] },
+  { to: '/floor-plan', label: 'Floor Plan', Icon: Grid, roles: ['admin', 'staff'] },
   { to: '/orders', label: 'Orders', Icon: ClipboardList, roles: ['admin', 'staff'] },
+  { to: '/kitchen', label: 'Kitchen', Icon: ChefHat, roles: ['admin', 'staff'] },
   { to: '/checkout', label: 'Checkout', Icon: CreditCard, roles: ['admin', 'staff'] },
   { to: '/transactions', label: 'Transactions', Icon: Receipt, roles: ['admin', 'staff', 'customer'] },
+  { to: '/inventory', label: 'Inventory', Icon: Package, roles: ['admin', 'staff'] },
 ];
 
 function NavItem({ item }) {
@@ -95,7 +100,10 @@ export default function Sidebar() {
         fontFamily: font.body,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px', marginBottom: '34px' }}>
+      <Link
+        to="/"
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px', marginBottom: '34px', textDecoration: 'none' }}
+      >
         <div
           style={{
             width: '42px',
@@ -116,7 +124,7 @@ export default function Sidebar() {
             {user ? user.role : 'Guest'}
           </div>
         </div>
-      </div>
+      </Link>
 
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
         {items.map((item) => (
