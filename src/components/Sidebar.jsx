@@ -2,7 +2,7 @@ import { NavLink, Link } from 'react-router-dom';
 import {
   UtensilsCrossed, PencilLine, ShoppingCart, ClipboardList,
   CreditCard, Receipt, LogOut, Flame, Settings, Bell,
-  CalendarDays, Grid, ChefHat, Package
+  CalendarDays, Grid, ChefHat, Package, Users, LifeBuoy, BarChart3, FileDown
 } from 'lucide-react';
 import { colors, font, radius, shadow } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +19,10 @@ export const NAV_ITEMS = [
   { to: '/checkout', label: 'Checkout', Icon: CreditCard, roles: ['admin', 'staff'] },
   { to: '/transactions', label: 'Transactions', Icon: Receipt, roles: ['admin', 'staff', 'customer'] },
   { to: '/inventory', label: 'Inventory', Icon: Package, roles: ['admin', 'staff'] },
+  { to: '/customers', label: 'Customers', Icon: Users, roles: ['admin', 'staff'] },
+  { to: '/support', label: 'Support', Icon: LifeBuoy, roles: ['admin', 'staff'] },
+  { to: '/analytics', label: 'Analytics', Icon: BarChart3, roles: ['admin', 'staff'] },
+  { to: '/reports', label: 'Reports', Icon: FileDown, roles: ['admin', 'staff'] },
 ];
 
 function NavItem({ item }) {
@@ -88,8 +92,6 @@ export default function Sidebar() {
         width: '224px',
         flexShrink: 0,
         height: '100vh',
-        position: 'sticky',
-        top: 0,
         padding: '26px 16px',
         display: 'flex',
         flexDirection: 'column',
