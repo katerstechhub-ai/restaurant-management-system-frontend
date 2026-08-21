@@ -20,6 +20,10 @@ import Reservations from './pages/Reservations';
 import FloorPlan from './pages/FloorPlan';
 import KitchenDashboard from './pages/KitchenDashboard';
 import Inventory from './pages/Inventory';
+import CustomerProfileStaff from './pages/CustomerProfileStaff';
+import SupportTickets from './pages/SupportTickets';
+import Analytics from './pages/Analytics';
+import Reports from './pages/Reports';
 
 export default function App() {
   return (
@@ -45,6 +49,10 @@ export default function App() {
             <Route path="/floor-plan" element={<ProtectedRoute roles={['admin', 'staff']}><FloorPlan /></ProtectedRoute>} />
             <Route path="/kitchen" element={<ProtectedRoute roles={['admin', 'staff']}><KitchenDashboard /></ProtectedRoute>} />
             <Route path="/inventory" element={<ProtectedRoute roles={['admin', 'staff']}><Inventory /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute roles={['admin', 'staff']}><CustomerProfileStaff /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute roles={['admin', 'staff']}><SupportTickets /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute roles={['admin', 'staff']}><Analytics /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute roles={['admin', 'staff']}><Reports /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/menu" replace />} />
           </Routes>
