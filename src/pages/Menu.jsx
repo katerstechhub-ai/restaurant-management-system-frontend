@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { getMenuItems } from '../api/menu';
+import { optimizedImage } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { colors, radius, font } from '../styles/tokens';
@@ -92,7 +93,10 @@ export default function Menu() {
 
   useEffect(() => {
     getMenuItems()
-      .then(setItems)
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
+        setItems(arr);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -245,7 +249,7 @@ export default function Menu() {
                 >
                   {thumb ? (
                     <img
-                      src={thumb}
+                      src={optimizedImage(thumb, { width: 64 })}
                       alt={c}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
@@ -301,7 +305,7 @@ export default function Menu() {
               >
                 {item.image ? (
                   <img
-                    src={item.image}
+                    src={optimizedImage(item.image, { width: 520 })}
                     alt={item.name}
                     loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}

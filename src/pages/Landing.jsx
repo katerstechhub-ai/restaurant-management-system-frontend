@@ -1,9 +1,31 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaHamburger, FaRocket, FaMapMarkerAlt, FaUtensils, FaShippingFast, FaLeaf, FaMobileAlt, FaTruck, FaClipboardList } from 'react-icons/fa';
+import { getMenuItems } from '../api/menu';
+import { optimizedImage } from '../utils/cloudinary';
+import { useCart } from '../context/CartContext';
 import './Landing.css';
 
 export default function Landing() {
+  const navigate = useNavigate();
+  const cartCtx = useCart();
+  const [dishes, setDishes] = useState([]);
+
+  useEffect(() => {
+    getMenuItems()
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
+        // Best Sellers is a marketing spot, not the full catalog — show a
+        // handful of available real dishes rather than everything on the menu.
+        setDishes(arr.filter((d) => d.available !== false).slice(0, 6));
+      })
+      .catch(() => setDishes([]));
+  }, []);
+
+  const handleBuyNow = (dish) => {
+    cartCtx.addItem(dish);
+    navigate('/order');
+  };
   return (
     <div className="landing-page">
       <div className="landing-container">
@@ -32,7 +54,7 @@ export default function Landing() {
             <p className="hero-subtitle">
               Food is what we eat to stay alive and healthy. It comes in many different forms and flavors, from fruits and vegetables to meats and grains.
             </p>
-            <button className="btn-primary">Order Now</button>
+            <button className="btn-primary" onClick={() => navigate('/menu')}>Order Now</button>
           </div>
           <div className="hero-image-wrapper">
             <div className="hero-blob"></div>
@@ -133,30 +155,44 @@ export default function Landing() {
             Experience the rich and vibrant flavors of our most popular authentic Nigerian meals. From smoky Jollof Rice to hearty Egusi Soup, every dish is prepared with fresh local ingredients and traditional recipes.
           </p>
           
-          <div className="dishes-grid">
-            {[
-              { name: "Jollof Rice & Chicken", image: "nigerian_food_1_1787181844089.jpg", price: "₦4,500" },
-              { name: "Egusi Soup & Pounded Yam", image: "nigerian_food_2_1787181852643.jpg", price: "₦5,000" },
-              { name: "Spicy Suya Skewers", image: "nigerian_food_3_1787181859999.jpg", price: "₦3,000" },
-              { name: "Efo Riro & Amala", image: "nigerian_food_4_1787182134319.jpg", price: "₦6,500" },
-              { name: "Fried Rice & Plantain", image: "nigerian_food_5_1787182142745.jpg", price: "₦4,000" },
-              { name: "Asaro Yam Porridge & Fish", image: "nigerian_food_6_1787182150127.jpg", price: "₦3,500" }
-            ].map((dish, index) => (
-              <div className="dish-card" key={index}>
-                <img src={`/images/landing/${dish.image}`} alt={dish.name} className="dish-image" />
-                <div className="dish-info">
-                  <div>
-                    <h4 className="dish-title">{dish.name}</h4>
-                    <div className="dish-rating">★★★★★</div>
-                  </div>
-                  <div className="dish-price-action">
-                    <span className="dish-price">{dish.price}</span>
-                    <button className="btn-buy">Buy Now</button>
+          {dishes.length === 0 ? (
+            <p className="section-subtitle" style={{ textAlign: 'center' }}>
+              Our menu is being freshly plated — check back shortly, or{' '}
+              <Link to="/menu" style={{ color: '#E84A3B', fontWeight: 700 }}>browse the full menu</Link>.
+            </p>
+          ) : (
+            <div className="dishes-grid">
+              {dishes.map((dish) => (
+                <div className="dish-card" key={dish._id}>
+                  {dish.image ? (
+                    <img
+                      src={optimizedImage(dish.image, { width: 480 })}
+                      alt={dish.name}
+                      className="dish-image"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div
+                      className="dish-image"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f1ee', color: '#c9c2b8' }}
+                    >
+                      <FaUtensils size={32} />
+                    </div>
+                  )}
+                  <div className="dish-info">
+                    <div>
+                      <h4 className="dish-title">{dish.name}</h4>
+                      <div className="dish-rating">★★★★★</div>
+                    </div>
+                    <div className="dish-price-action">
+                      <span className="dish-price">₦{Number(dish.price).toLocaleString()}</span>
+                      <button className="btn-buy" onClick={() => handleBuyNow(dish)}>Buy Now</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Feedback Section */}

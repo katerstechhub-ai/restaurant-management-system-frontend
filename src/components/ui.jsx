@@ -1,4 +1,5 @@
 import { colors, font, radius, shadow } from '../styles/tokens';
+import { optimizedImage } from '../utils/cloudinary';
 
 export function Card({ children, style, hover = false, ...rest }) {
   return (
@@ -145,7 +146,7 @@ export function EmptyState({ icon: Icon, title, hint }) {
 export function Thumb({ src, alt, size = 56, radiusPx = 14 }) {
   return src ? (
     <img
-      src={src}
+      src={optimizedImage(src, { width: size * 2 })}
       alt={alt}
       loading="lazy"
       style={{ width: size, height: size, objectFit: 'cover', borderRadius: radiusPx, border: `1px solid ${colors.border}`, flexShrink: 0 }}

@@ -1,9 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { getTables, assignWalkIn, addTable } from '../api/maleek';
-import { PageTitle, Card, Button, Input, Select, StatusPill, ErrorText } from '../components/ui';
+import { getTables, assignWalkIn } from '../api/maleek';
+import { PageTitle, Card, Button, Input, StatusPill, ErrorText } from '../components/ui';
 import { colors, radius, shadow } from '../styles/tokens';
-import { Plus, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
+
+// Maleek's /tables endpoint is still being built out, so the exact response
+// shape (bare array vs. { tables: [...] } vs. { data: [...] }) isn't locked
+// down yet. Without this, `tables.map(...)` below throws the moment the
+// shape doesn't match, and — since there's no error boundary catching it —
+// that was taking the whole page blank. Normalizing here means the page
+// renders (with an empty state) no matter which shape comes back.
+function toTableArray(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.tables)) return res.tables;
+  if (Array.isArray(res?.data)) return res.data;
+  return [];
+}
 
 export default function FloorPlan() {
   const [tables, setTables] = useState([]);
@@ -15,21 +28,20 @@ export default function FloorPlan() {
   const [partySize, setPartySize] = useState(2);
   const [walkInError, setWalkInError] = useState('');
 
-  useEffect(() => {
-    loadTables();
-  }, []);
-
   const loadTables = async () => {
     try {
-      setLoading(true);
       const data = await getTables();
-      setTables(data);
-    } catch (err) {
+      setTables(toTableArray(data));
+    } catch {
       setError('Failed to load tables.');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadTables();
+  }, []);
 
   const handleWalkIn = async (e) => {
     e.preventDefault();
@@ -59,12 +71,16 @@ export default function FloorPlan() {
 
   return (
     <AdminLayout>
-      <PageTitle description="Visual layout and walk-in assignments">Floor Plan</PageTitle>
+      <PageTitle subtitle="Visual layout and walk-in assignments">Floor Plan</PageTitle>
 
       {error && <ErrorText>{error}</ErrorText>}
 
       {loading ? (
         <p>Loading tables...</p>
+      ) : tables.length === 0 ? (
+        <Card style={{ textAlign: 'center', padding: '48px 24px', color: colors.textMuted }}>
+          No tables set up yet.
+        </Card>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
           {tables.map(table => (
@@ -79,7 +95,7 @@ export default function FloorPlan() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '12px',
-                boxShadow: shadow.card
+                boxShadow: shadow.md
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

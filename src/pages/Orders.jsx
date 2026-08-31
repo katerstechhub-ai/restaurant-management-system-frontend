@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff } from 'lucide-react';
 import { getOrders, updateOrderStatus } from '../api/orders';
+import { optimizedImage } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
@@ -29,7 +30,7 @@ function ItemThumb({ src, alt, size = 52 }) {
     >
       {src ? (
         <img
-          src={src}
+          src={optimizedImage(src, { width: size * 2 })}
           alt={alt}
           loading="lazy"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}

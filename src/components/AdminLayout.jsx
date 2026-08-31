@@ -126,7 +126,7 @@ export default function AdminLayout({ title, action, children }) {
                 <X size={20} />
               </button>
             </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing(1) }}>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: spacing(1), overflowY: 'auto', minHeight: 0 }}>
               {items.map(({ to, label, Icon }) => (
                 <NavLink key={to} to={to} style={linkStyle} onClick={() => setOpen(false)}>
                   <Icon size={18} style={{ flexShrink: 0 }} />
