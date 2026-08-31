@@ -128,7 +128,18 @@ export default function Sidebar() {
         </div>
       </Link>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+      <nav
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${colors.border} transparent`,
+        }}
+      >
         {items.map((item) => (
           <NavItem key={item.to} item={item} />
         ))}

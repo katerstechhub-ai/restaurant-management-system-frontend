@@ -124,7 +124,7 @@ export default function Inventory() {
         <p>Loading inventory...</p>
       ) : (
         <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: font.body, fontSize: '14px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: colors.panelAlt, borderBottom: `1px solid ${colors.border}` }}>
                 <th style={{ padding: '16px', color: colors.textMuted, fontWeight: 600 }}>Item Name</th>
