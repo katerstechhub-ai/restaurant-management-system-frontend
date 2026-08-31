@@ -8,7 +8,7 @@ import AppLayout from '../components/AppLayout';
 import AdminLayout from '../components/AdminLayout';
 import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
 
-const STATUSES = ['pending', 'in-progress', 'completed'];
+const STATUSES = ['pending', 'preparing', 'ready', 'completed'];
 
 // Same treatment as the menu cards: rounded square, cropped photo, and an
 // icon medallion fallback when the item has no image.
