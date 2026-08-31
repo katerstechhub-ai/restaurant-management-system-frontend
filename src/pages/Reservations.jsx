@@ -1,174 +1,191 @@
-import React, { useState, useEffect } from 'react';
-import AppLayout from '../components/AppLayout';
-import { getAvailableSlots, createReservation, getTables } from '../api/maleek';
-import { PageTitle, Card, Button, Input, Select, ErrorText, StatusPill } from '../components/ui';
-import { colors } from '../styles/tokens';
+import { useEffect, useState } from 'react';
+import { colors, font } from '../styles/tokens';
+import { Card, Button, ErrorText } from '../components/ui';
+import {
+  getTables,
+  getAvailableSlots,
+  getMyReservations,
+  createReservation,
+  cancelReservation,
+} from '../api/maleek';
+import SeatingMap from '../components/SeatingMap';
 
-const TIME_SLOTS = ['18:00', '19:00', '20:00', '21:00', '22:00'];
+// Placeholder slots — swap for whatever service windows the restaurant actually offers.
+const TIME_SLOTS = ['12:00 PM', '1:00 PM', '2:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
+
+// Mirrors the normalization in pages/FloorPlan.jsx (admin) — getTables' response
+// shape isn't locked down yet, so this keeps the page from throwing if it
+// comes back as a bare array vs. { tables: [...] } vs. { data: [...] }.
+function toTableArray(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.tables)) return res.tables;
+  if (Array.isArray(res?.data)) return res.data;
+  return [];
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function Reservations() {
   const [tables, setTables] = useState([]);
-  const [booked, setBooked] = useState([]);
-  const [date, setDate] = useState('');
-  const [partySize, setPartySize] = useState('2');
-  const [timeSlot, setTimeSlot] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [date, setDate] = useState(todayISO());
+  const [timeSlot, setTimeSlot] = useState(TIME_SLOTS[0]);
+  const [bookedTableIds, setBookedTableIds] = useState(new Set());
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [partySize, setPartySize] = useState(2);
+  const [myReservations, setMyReservations] = useState([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    loadTables();
+    getTables().then((data) => setTables(toTableArray(data))).catch(() => setTables([]));
+    loadMyReservations();
   }, []);
 
   useEffect(() => {
-    if (date) {
-      loadBookedSlots();
-    } else {
-      setBooked([]);
-    }
-  }, [date]);
+    setSelectedTable(null);
+    getAvailableSlots(date)
+      .then((data) => {
+        const bookedForSlot = (data.booked || [])
+          .filter((r) => r.timeSlot === timeSlot)
+          .map((r) => r.table?._id || r.table);
+        setBookedTableIds(new Set(bookedForSlot));
+      })
+      .catch(() => setBookedTableIds(new Set()));
+  }, [date, timeSlot]);
 
-  const loadTables = async () => {
-    try {
-      const data = await getTables();
-      setTables(data);
-    } catch (err) {
-      console.error(err);
-    }
+  const loadMyReservations = () => {
+    getMyReservations().then(setMyReservations).catch(() => setMyReservations([]));
   };
 
-  const loadBookedSlots = async () => {
-    try {
-      const data = await getAvailableSlots(date);
-      setBooked(data.booked || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleBook = async (e) => {
-    e.preventDefault();
+  const handleConfirm = async () => {
+    if (!selectedTable) return;
     setError('');
-    setSuccess('');
-
-    if (!date || !timeSlot || !partySize) {
-      return setError('Please fill in all fields.');
-    }
-
-    // Find an available table that fits the party size
-    const availableTables = tables.filter(t => t.capacity >= Number(partySize));
-    if (availableTables.length === 0) {
-      return setError('We do not have a table large enough for your party.');
-    }
-
-    // Filter out tables that are already booked for this date & timeslot
-    const bookedTableIds = booked
-      .filter(b => b.timeSlot === timeSlot)
-      .map(b => (typeof b.table === 'object' ? b.table._id : b.table));
-
-    const tableToBook = availableTables.find(t => !bookedTableIds.includes(t._id));
-
-    if (!tableToBook) {
-      return setError('No tables available for this time slot. Please choose another time.');
-    }
-
+    setBusy(true);
     try {
-      setLoading(true);
-      await createReservation({ tableId: tableToBook._id, date, timeSlot });
-      setSuccess(`Table booked successfully for ${date} at ${timeSlot}!`);
-      setDate('');
-      setTimeSlot('');
-      setBooked([]);
+      await createReservation({ tableId: selectedTable._id, date, timeSlot });
+      setSelectedTable(null);
+      // Refresh availability and history so the just-booked table shows as taken
+      const data = await getAvailableSlots(date);
+      const bookedForSlot = (data.booked || [])
+        .filter((r) => r.timeSlot === timeSlot)
+        .map((r) => r.table?._id || r.table);
+      setBookedTableIds(new Set(bookedForSlot));
+      loadMyReservations();
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Booking failed');
+      setError(err?.response?.data?.message || err.message);
     } finally {
-      setLoading(false);
+      setBusy(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    try {
+      await cancelReservation(id);
+      loadMyReservations();
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message);
     }
   };
 
   return (
-    <AppLayout>
-      <PageTitle description="Book a table for your next visit">Table Reservations</PageTitle>
-      
-      <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        <Card title="Book a Table">
-          <form onSubmit={handleBook} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-            <Input 
-              label="Date" 
-              type="date" 
-              value={date} 
-              onChange={e => setDate(e.target.value)} 
-              min={new Date().toISOString().split('T')[0]} 
-              required
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 16px', fontFamily: font.body }}>
+      <h1 style={{ fontFamily: font.display, fontSize: '24px', color: colors.textPrimary, marginBottom: '20px' }}>
+        Reserve a Table
+      </h1>
+
+      <Card>
+        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', color: colors.textMuted, marginBottom: '4px' }}>
+              Date
+            </label>
+            <input
+              type="date"
+              value={date}
+              min={todayISO()}
+              onChange={(e) => setDate(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc' }}
             />
-            
-            <Select label="Party Size" value={partySize} onChange={e => setPartySize(e.target.value)} required>
-              <option value="1">1 Person</option>
-              <option value="2">2 People</option>
-              <option value="3">3 People</option>
-              <option value="4">4 People</option>
-              <option value="5">5 People</option>
-              <option value="6">6 People</option>
-              <option value="8">8 People</option>
-              <option value="10">10 People</option>
-            </Select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', color: colors.textMuted, marginBottom: '4px' }}>
+              Time
+            </label>
+            <select
+              value={timeSlot}
+              onChange={(e) => setTimeSlot(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc' }}
+            >
+              {TIME_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', color: colors.textMuted, marginBottom: '4px' }}>
+              Party size
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={partySize}
+              onChange={(e) => setPartySize(Number(e.target.value))}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ccc', width: '80px' }}
+            />
+          </div>
+        </div>
 
-            {date && (
+        <SeatingMap
+          tables={tables}
+          bookedTableIds={bookedTableIds}
+          selectedTableId={selectedTable?._id}
+          onSelectTable={(table) => {
+            if (table.capacity < partySize) {
+              setError(`Table ${table.tableNumber} only seats ${table.capacity}`);
+              return;
+            }
+            setError('');
+            setSelectedTable(table);
+          }}
+        />
+
+        <ErrorText>{error}</ErrorText>
+
+        <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+          <Button disabled={!selectedTable || busy} onClick={handleConfirm}>
+            {busy ? 'Booking...' : selectedTable ? `Book Table ${selectedTable.tableNumber}` : 'Select a table'}
+          </Button>
+        </div>
+      </Card>
+
+      <h2 style={{ fontFamily: font.display, fontSize: '18px', color: colors.textPrimary, margin: '32px 0 12px' }}>
+        My Reservations
+      </h2>
+      {myReservations.length === 0 ? (
+        <p style={{ color: colors.textMuted, fontSize: '13px' }}>You have no reservations yet.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {myReservations.map((r) => (
+            <Card key={r._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', letterSpacing: '.08em', textTransform: 'uppercase', color: colors.textMuted, marginBottom: '6px' }}>
-                  Available Time Slots
-                </label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {TIME_SLOTS.map(slot => {
-                    // Check if all tables big enough for the party are booked
-                    const availableTables = tables.filter(t => t.capacity >= Number(partySize));
-                    const bookedTableIds = booked
-                      .filter(b => b.timeSlot === slot)
-                      .map(b => (typeof b.table === 'object' ? b.table._id : b.table));
-                    const tableToBook = availableTables.find(t => !bookedTableIds.includes(t._id));
-                    
-                    const isAvailable = !!tableToBook;
-
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={!isAvailable}
-                        onClick={() => setTimeSlot(slot)}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '8px',
-                          border: `1px solid ${timeSlot === slot ? colors.accent : colors.border}`,
-                          background: timeSlot === slot ? colors.accent : 'transparent',
-                          color: timeSlot === slot ? '#fff' : (isAvailable ? colors.text : colors.textMuted),
-                          cursor: isAvailable ? 'pointer' : 'not-allowed',
-                          opacity: isAvailable ? 1 : 0.5
-                        }}
-                      >
-                        {slot}
-                      </button>
-                    );
-                  })}
+                <div style={{ fontWeight: 700, color: colors.textPrimary }}>
+                  Table {r.table?.tableNumber} · {r.timeSlot}
+                </div>
+                <div style={{ fontSize: '13px', color: colors.textMuted }}>
+                  {new Date(r.date).toLocaleDateString()} · {r.status}
                 </div>
               </div>
-            )}
-
-            <ErrorText>{error}</ErrorText>
-            {success && <div style={{ color: '#4caf50', fontSize: '13px', margin: '10px 0' }}>{success}</div>}
-
-            <Button type="submit" disabled={loading || !date || !timeSlot}>
-              {loading ? 'Booking...' : 'Confirm Reservation'}
-            </Button>
-          </form>
-        </Card>
-
-        <Card>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px' }}>Your Upcoming Reservations</h3>
-          <p style={{ color: colors.textMuted, fontSize: '13px' }}>
-            We're currently not storing your reservation history in this view. Please contact support if you need to modify an existing reservation.
-          </p>
-        </Card>
-      </div>
-    </AppLayout>
+              {r.status === 'confirmed' && (
+                <Button variant="secondary" onClick={() => handleCancel(r._id)}>
+                  Cancel
+                </Button>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

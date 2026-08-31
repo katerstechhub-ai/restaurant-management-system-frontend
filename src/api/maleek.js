@@ -6,6 +6,11 @@ export async function getAvailableSlots(date) {
   return res.data;
 }
 
+export async function getMyReservations() {
+  const res = await client.get('/reservations/mine');
+  return res.data;
+}
+
 export async function createReservation(data) {
   const res = await client.post('/reservations', data);
   return res.data;
