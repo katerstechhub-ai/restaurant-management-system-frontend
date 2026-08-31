@@ -82,8 +82,19 @@ export default function Analytics() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading((l) => ({ ...l, dishes: false })));
 
+    // getCustomerSegments returns { new: [...], regular: [...], vip: [...] } —
+    // an object keyed by segment name, each value a full array of customer
+    // records — not a bare array or { data: [...] }, so toArray() doesn't
+    // apply here. Shape it into [{ name, value }] directly (value = count
+    // per segment) for the pie chart below.
     getCustomerSegments()
-      .then((res) => setSegments(toArray(res)))
+      .then((res) => {
+        const shaped = ['new', 'regular', 'vip'].map((key) => ({
+          name: key,
+          value: Array.isArray(res?.[key]) ? res[key].length : 0,
+        }));
+        setSegments(shaped);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading((l) => ({ ...l, segments: false })));
   }, []);
@@ -100,10 +111,7 @@ export default function Analytics() {
     }))
     .slice(0, 8);
 
-  const segmentData = segments.map((s) => ({
-    name: s.segment || s.name || 'unknown',
-    value: Number(s.count ?? s.total ?? 0),
-  }));
+  const segmentData = segments;
 
   return (
     <AdminLayout title="Analytics">
@@ -165,7 +173,7 @@ export default function Analytics() {
           title="Customer Segments"
           subtitle="New, regular, and VIP customers"
           loading={loading.segments}
-          empty={!loading.segments && segmentData.length === 0}
+          empty={!loading.segments && segmentData.every((s) => s.value === 0)}
           emptyHint="No customer data yet — segments will populate as customers place orders."
         >
           <ResponsiveContainer width="100%" height={260}>
