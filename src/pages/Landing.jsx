@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaHamburger, FaRocket, FaMapMarkerAlt, FaUtensils, FaShippingFast, FaLeaf, FaMobileAlt, FaTruck, FaClipboardList } from 'react-icons/fa';
 import { getMenuItems } from '../api/menu';
+import { getMe } from '../api/auth';
 import { optimizedImage } from '../utils/cloudinary';
 import { useCart } from '../context/CartContext';
 import './Landing.css';
@@ -10,6 +11,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const cartCtx = useCart();
   const [dishes, setDishes] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     getMenuItems()
@@ -20,6 +22,12 @@ export default function Landing() {
         setDishes(arr.filter((d) => d.available !== false).slice(0, 6));
       })
       .catch(() => setDishes([]));
+  }, []);
+
+  useEffect(() => {
+    getMe()
+      .then((data) => setUser(data?.user || data || null))
+      .catch(() => setUser(null));
   }, []);
 
   const handleBuyNow = (dish) => {
@@ -41,7 +49,31 @@ export default function Landing() {
             <a href="#about">About us</a>
             <a href="#contact">Contact us</a>
           </div>
-          <Link to="/login" className="btn-login">Login</Link>
+          {user ? (
+            <div
+              className="btn-login"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'default' }}
+            >
+              <span>Hi, {user.name}</span>
+              {user.role === 'admin' && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: '#E84A3B',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Admin
+                </span>
+              )}
+            </div>
+          ) : (
+            <Link to="/login" className="btn-login">Login</Link>
+          )}
         </nav>
 
         {/* Hero Section */}
