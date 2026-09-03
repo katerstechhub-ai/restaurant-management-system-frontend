@@ -5,15 +5,12 @@ import { colors, font } from '../styles/tokens';
 import AdminLayout from '../components/AdminLayout';
 import { Card, Select, Input, Button, PageTitle, ErrorText } from '../components/ui';
 
-// Report types line up with the aggregate endpoints described in the task
-// breakdown (sales trends, menu popularity, revenue by period, customer
-// demographics). If Rufus's backend ends up using different `type` values,
-// only this list needs to change.
+// Types must match backend's exports.generateReport switch exactly.
+// Backend only implements 'sales' and 'top-dishes' — do not add values here
+// until a matching branch exists in the controller.
 const REPORT_TYPES = [
-  { value: 'sales-trends', label: 'Sales Trends' },
-  { value: 'menu-popularity', label: 'Menu Popularity' },
-  { value: 'revenue-by-period', label: 'Revenue by Period' },
-  { value: 'customer-demographics', label: 'Customer Demographics' },
+  { value: 'sales', label: 'Sales' },
+  { value: 'top-dishes', label: 'Top Dishes' },
 ];
 
 function defaultFrom() {
@@ -41,7 +38,7 @@ export default function Reports() {
       const blob = await generateReport(type, from, to);
       const url = URL.createObjectURL(blob);
       const label = REPORT_TYPES.find((r) => r.value === type)?.label || type;
-      const filename = `${type}_${from}_to_${to}.pdf`;
+      const filename = `${type}_${from}_to_${to}.csv`;
 
       const link = document.createElement('a');
       link.href = url;
