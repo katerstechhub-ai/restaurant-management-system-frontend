@@ -1,4 +1,4 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   UtensilsCrossed, PencilLine, ShoppingCart, ClipboardList,
   CreditCard, Receipt, LogOut, Flame, Settings, Bell,
@@ -71,7 +71,13 @@ function NavItem({ item }) {
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const items = NAV_ITEMS.filter((i) => user && i.roles.includes(user.role));
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
 
   const iconBtn = {
     width: '38px',
@@ -149,7 +155,7 @@ export default function Sidebar() {
         <button style={iconBtn} title="Settings"><Settings size={17} /></button>
         <button style={iconBtn} title="Notifications"><Bell size={17} /></button>
         <button
-          onClick={logout}
+          onClick={handleLogout}
           title="Log out"
           style={{ ...iconBtn, marginLeft: 'auto', background: colors.accentSoft, color: colors.accent, borderColor: 'transparent' }}
         >
