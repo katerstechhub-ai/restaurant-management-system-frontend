@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { Menu as MenuIcon, X, LogOut, Flame } from 'lucide-react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { FaHamburger } from 'react-icons/fa';
+import { Menu as MenuIcon, X, LogOut } from 'lucide-react';
 import { colors, font, radius, spacing } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
 import Sidebar, { NAV_ITEMS } from './Sidebar';
@@ -24,7 +25,14 @@ export default function AdminLayout({ title, action, children }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const items = NAV_ITEMS.filter((i) => user && i.roles.includes(user.role));
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    navigate('/');
+  };
 
   useEffect(() => { if (!isMobile) setOpen(false); }, [isMobile]);
   useEffect(() => {
@@ -48,13 +56,13 @@ export default function AdminLayout({ title, action, children }) {
         width: 32, height: 32, flexShrink: 0, display: 'grid', placeItems: 'center',
         borderRadius: radius.sm, background: colors.accent,
       }}>
-        <Flame size={18} color="#fff" />
+        <FaHamburger size={16} color="#fff" />
       </div>
       <span style={{
         fontFamily: font.display, fontWeight: 700, fontSize: '16px',
         color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-      }}>Rustico</span>
+      }}>foodie</span>
     </Link>
   );
 
@@ -134,7 +142,7 @@ export default function AdminLayout({ title, action, children }) {
                 </NavLink>
               ))}
             </nav>
-            <button onClick={() => { setOpen(false); logout(); }} style={{
+            <button onClick={handleLogout} style={{
               marginTop: 'auto', display: 'flex', alignItems: 'center', gap: spacing(2),
               background: 'transparent', border: `1px solid ${colors.border}`,
               color: colors.textMuted, borderRadius: radius.md,

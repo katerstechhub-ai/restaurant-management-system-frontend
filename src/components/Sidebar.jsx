@@ -1,7 +1,8 @@
 import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { FaHamburger } from 'react-icons/fa';
 import {
   UtensilsCrossed, PencilLine, ShoppingCart, ClipboardList,
-  CreditCard, Receipt, LogOut, Flame, Settings, Bell,
+  CreditCard, Receipt, LogOut, Settings, Bell,
   CalendarDays, Grid, ChefHat, Package, Users, LifeBuoy, BarChart3, FileDown
 } from 'lucide-react';
 import { colors, font, radius, shadow } from '../styles/tokens';
@@ -124,10 +125,10 @@ export default function Sidebar() {
             boxShadow: shadow.glow,
           }}
         >
-          <Flame size={22} color="#fff" strokeWidth={2.2} />
+          <FaHamburger size={20} color="#fff" />
         </div>
         <div>
-          <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.text, fontSize: '15px' }}>Rustico</div>
+          <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.text, fontSize: '15px' }}>foodie</div>
           <div style={{ color: colors.textMuted, fontSize: '11px', textTransform: 'capitalize' }}>
             {user ? user.role : 'Guest'}
           </div>

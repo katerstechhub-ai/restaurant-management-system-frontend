@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { FaHamburger } from 'react-icons/fa';
 import {
   UtensilsCrossed, Wallet, Receipt, ShoppingCart, User,
-  Menu as MenuIcon, X, LogOut, Flame, Settings, Bell,
+  Menu as MenuIcon, X, LogOut, Settings, Bell,
 } from 'lucide-react';
 import { colors, font, radius, spacing, shadow } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
@@ -73,6 +74,12 @@ export default function AppLayout({ title, action, children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+    navigate('/');
+  };
+
   useEffect(() => { if (!isMobile) setOpen(false); }, [isMobile]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -94,10 +101,10 @@ export default function AppLayout({ title, action, children }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: shadow.glow, flexShrink: 0,
       }}>
-        <Flame size={22} color="#fff" strokeWidth={2.2} />
+        <FaHamburger size={20} color="#fff" />
       </div>
       <div style={{ minWidth: 0, overflow: 'hidden' }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.text, fontSize: '15px' }}>Rustico</div>
+        <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.text, fontSize: '15px' }}>foodie</div>
         <div style={{ color: colors.textMuted, fontSize: '11px', textTransform: 'capitalize' }}>
           {user ? user.role : 'Guest'}
         </div>
@@ -129,7 +136,7 @@ export default function AppLayout({ title, action, children }) {
             <button style={iconBtn} title="Settings"><Settings size={17} /></button>
             <button style={iconBtn} title="Notifications"><Bell size={17} /></button>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               title="Log out"
               style={{ ...iconBtn, marginLeft: 'auto', background: colors.accentSoft, color: colors.accent, borderColor: 'transparent' }}
             >
@@ -210,7 +217,7 @@ export default function AppLayout({ title, action, children }) {
               <button style={iconBtn} title="Settings"><Settings size={17} /></button>
               <button style={iconBtn} title="Notifications"><Bell size={17} /></button>
               <button
-                onClick={() => { setOpen(false); logout(); }}
+                onClick={handleLogout}
                 title="Log out"
                 style={{ ...iconBtn, marginLeft: 'auto', background: colors.accentSoft, color: colors.accent, borderColor: 'transparent' }}
               >
