@@ -130,7 +130,7 @@ export default function Menu() {
   }, [items, query, category]);
 
   const isCustomer = user && user.role === 'customer';
-  const isStaffOrAdmin = user && (user.role === 'admin' || user.role === 'staff');
+  const isStaffOrAdmin = user && ['admin', 'waiter', 'kitchen'].includes(user.role);
   const Layout = isStaffOrAdmin ? AdminLayout : AppLayout;
 
   return (

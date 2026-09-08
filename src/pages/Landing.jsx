@@ -5,11 +5,13 @@ import { getMenuItems } from '../api/menu';
 import { getMe } from '../api/auth';
 import { optimizedImage } from '../utils/cloudinary';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import './Landing.css';
 
 export default function Landing() {
   const navigate = useNavigate();
   const cartCtx = useCart();
+  const { logout } = useAuth();
   const [dishes, setDishes] = useState([]);
   const [user, setUser] = useState(null);
 
@@ -33,6 +35,12 @@ export default function Landing() {
   const handleBuyNow = (dish) => {
     cartCtx.addItem(dish);
     navigate('/order');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+    navigate('/');
   };
   return (
     <div className="landing-page">
@@ -70,6 +78,21 @@ export default function Landing() {
                   Admin
                 </span>
               )}
+              <button
+                onClick={handleLogout}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#777',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                Log out
+              </button>
             </div>
           ) : (
             <Link to="/login" className="btn-login">Login</Link>
