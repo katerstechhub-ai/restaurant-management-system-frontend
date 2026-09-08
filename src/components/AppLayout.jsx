@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { FaHamburger } from 'react-icons/fa';
 import {
-  UtensilsCrossed, Wallet, Receipt, ShoppingCart, User,
+  UtensilsCrossed, Wallet, Receipt, ShoppingCart, User, CalendarDays,
   Menu as MenuIcon, X, LogOut, Settings, Bell,
 } from 'lucide-react';
 import { colors, font, radius, spacing, shadow } from '../styles/tokens';
@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 const NAV = [
   { to: '/menu', label: 'Menu', Icon: UtensilsCrossed },
   { to: '/order', label: 'Order', Icon: ShoppingCart },
+  { to: '/reservations', label: 'Reservations', Icon: CalendarDays },
   { to: '/wallet', label: 'Wallet', Icon: Wallet },
   { to: '/transactions', label: 'Transactions', Icon: Receipt },
   { to: '/profile', label: 'Profile', Icon: User },
