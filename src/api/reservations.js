@@ -5,6 +5,14 @@ export async function getAvailableSlots(date) {
   return res.data;
 }
 
+// The seat-map endpoint — every table annotated with 'available' | 'booked' |
+// 'unavailable' for this exact date + timeSlot. No auth required, so the
+// picker works before login too.
+export async function getTableAvailability({ date, timeSlot }) {
+  const res = await client.get('/reservations/availability', { params: { date, timeSlot } });
+  return res.data;
+}
+
 export async function getMyReservations() {
   const res = await client.get('/reservations/mine');
   return res.data;
