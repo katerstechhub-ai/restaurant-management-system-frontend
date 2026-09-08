@@ -1,8 +1,9 @@
 import client from './client';
 
-export async function registerUser({ name, email, password, role }) {
+export async function registerUser({ name, email, password, role, address }) {
   const body = { name, email, password };
   if (role) body.role = role;
+  if (address) body.address = address;
   const res = await client.post('/auth/register', body);
   return res.data;
 }
@@ -14,6 +15,11 @@ export async function loginUser({ email, password }) {
 
 export async function getMe() {
   const res = await client.get('/auth/me');
+  return res.data;
+}
+
+export async function updateAddress({ address }) {
+  const res = await client.patch('/auth/address', { address });
   return res.data;
 }
 
