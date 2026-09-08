@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff } from 'lucide-react';
+import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff, MapPin, Wallet as WalletIcon, CreditCard } from 'lucide-react';
 import { getOrders, updateOrderStatus } from '../api/orders';
 import { optimizedImage } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
@@ -67,6 +67,31 @@ function ShowCompletedToggle({ show, onToggle, count }) {
       {show ? <Eye size={14} /> : <EyeOff size={14} />}
       {show ? 'Hide completed' : `Show completed (${count})`}
     </button>
+  );
+}
+
+// How this order was paid for — or that it wasn't yet (dine-in, pay at
+// table). Distinct from StatusPill, which tracks kitchen progress, not money.
+function PaymentBadge({ order }) {
+  let Icon = Clock;
+  let label = 'Pay at table';
+  let color = colors.textMuted;
+
+  if (order.paidWithCard) {
+    Icon = CreditCard;
+    label = 'Paid · card';
+    color = colors.accent;
+  } else if (order.paidWithWallet) {
+    Icon = WalletIcon;
+    label = 'Paid · wallet';
+    color = colors.success ?? '#3fb950';
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color, fontSize: '12px', fontWeight: 600 }}>
+      <Icon size={13} />
+      {label}
+    </div>
   );
 }
 
@@ -196,6 +221,15 @@ export default function Orders() {
                     <span style={{ textTransform: 'capitalize' }}>{order.orderType}</span>
                     <span>·</span>
                     <span style={{ color: colors.accent, fontWeight: 700 }}>₦{Number(order.totalAmount).toFixed(2)}</span>
+                  </div>
+                  {order.orderType === 'delivery' && order.deliveryAddress && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: colors.textMuted, fontSize: '12px', marginTop: '6px', maxWidth: '360px' }}>
+                      <MapPin size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
+                      <span>{order.deliveryAddress}</span>
+                    </div>
+                  )}
+                  <div style={{ marginTop: '6px' }}>
+                    <PaymentBadge order={order} />
                   </div>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { loginUser, registerUser, getMe } from '../api/auth';
+import { loginUser, registerUser, getMe, updateAddress as updateAddressApi } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -24,14 +24,22 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const data = await loginUser({ email, password });
     localStorage.setItem('rms_token', data.token);
-    setUser({ _id: data._id, name: data.name, email: data.email, role: data.role });
+    setUser({ _id: data._id, name: data.name, email: data.email, role: data.role, address: data.address });
     return data;
   };
 
-  const register = async (name, email, password) => {
-    const data = await registerUser({ name, email, password });
+  const register = async (name, email, password, address) => {
+    const data = await registerUser({ name, email, password, address });
     localStorage.setItem('rms_token', data.token);
-    setUser({ _id: data._id, name: data.name, email: data.email, role: data.role });
+    setUser({ _id: data._id, name: data.name, email: data.email, role: data.role, address: data.address });
+    return data;
+  };
+
+  // Adds/updates the logged-in user's address (e.g. from checkout) and
+  // reflects it in context immediately so the UI stops asking for it.
+  const updateAddress = async (address) => {
+    const data = await updateAddressApi({ address });
+    setUser((prev) => (prev ? { ...prev, address: data.address } : prev));
     return data;
   };
 
@@ -41,7 +49,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, updateAddress, logout }}>
       {children}
     </AuthContext.Provider>
   );

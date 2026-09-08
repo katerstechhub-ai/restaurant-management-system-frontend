@@ -10,6 +10,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [address, setAddress] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -18,7 +19,7 @@ export default function Register() {
     setError('');
     setBusy(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, address);
       navigate('/');
     } catch (err) {
       setError(err.message);
@@ -37,6 +38,12 @@ export default function Register() {
           <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+          <Input
+            label="Delivery address (optional)"
+            placeholder="You can add this later at checkout"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" disabled={busy}>{busy ? 'Creating...' : 'Create account'}</Button>
         </form>
