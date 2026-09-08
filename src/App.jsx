@@ -31,6 +31,7 @@ const CustomerProfileStaff = lazy(() => import('./pages/CustomerProfileStaff'));
 const SupportTickets = lazy(() => import('./pages/SupportTickets'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Reports = lazy(() => import('./pages/Reports'));
+const Users = lazy(() => import('./pages/Users'));
 
 function RouteFallback() {
   return (
@@ -58,18 +59,19 @@ export default function App() {
                 <Route path="/menu-admin" element={<ProtectedRoute roles={['admin']}><MenuAdmin /></ProtectedRoute>} />
                 <Route path="/order" element={<ProtectedRoute roles={['customer']}><PlaceOrder /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                <Route path="/checkout" element={<ProtectedRoute roles={['admin', 'staff']}><Checkout /></ProtectedRoute>} />
+                <Route path="/checkout" element={<ProtectedRoute roles={['admin', 'waiter']}><Checkout /></ProtectedRoute>} />
                 <Route path="/transactions" element={<ProtectedRoute><TransactionHistory /></ProtectedRoute>} />
                 <Route path="/wallet" element={<ProtectedRoute roles={['customer']}><Wallet /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/reservations" element={<ProtectedRoute roles={['customer']}><Reservations /></ProtectedRoute>} />
-                <Route path="/floor-plan" element={<ProtectedRoute roles={['admin', 'staff']}><FloorPlan /></ProtectedRoute>} />
-                <Route path="/kitchen" element={<ProtectedRoute roles={['admin', 'staff']}><KitchenDashboard /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute roles={['admin', 'staff']}><Inventory /></ProtectedRoute>} />
-                <Route path="/customers" element={<ProtectedRoute roles={['admin', 'staff']}><CustomerProfileStaff /></ProtectedRoute>} />
-                <Route path="/support" element={<ProtectedRoute roles={['admin', 'staff']}><SupportTickets /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute roles={['admin', 'staff']}><Analytics /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute roles={['admin', 'staff']}><Reports /></ProtectedRoute>} />
+                <Route path="/floor-plan" element={<ProtectedRoute roles={['admin', 'waiter']}><FloorPlan /></ProtectedRoute>} />
+                <Route path="/kitchen" element={<ProtectedRoute roles={['admin', 'kitchen']}><KitchenDashboard /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute roles={['admin', 'kitchen']}><Inventory /></ProtectedRoute>} />
+                <Route path="/customers" element={<ProtectedRoute roles={['admin', 'waiter']}><CustomerProfileStaff /></ProtectedRoute>} />
+                <Route path="/support" element={<ProtectedRoute roles={['admin', 'waiter', 'kitchen']}><SupportTickets /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute roles={['admin']}><Analytics /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
 
                 <Route path="*" element={<Navigate to="/menu" replace />} />
               </Routes>

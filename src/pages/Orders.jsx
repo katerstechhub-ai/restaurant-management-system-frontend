@@ -76,7 +76,7 @@ export default function Orders() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
-  const canManage = user && (user.role === 'admin' || user.role === 'staff');
+  const canManage = user && ['admin', 'waiter', 'kitchen'].includes(user.role);
   const Layout = canManage ? AdminLayout : AppLayout;
 
   const load = () => {

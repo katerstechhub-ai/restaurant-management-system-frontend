@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Minus, Plus, ShoppingCart, CheckCircle2, Bike, UtensilsCrossed, Wallet as WalletIcon } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, CheckCircle2, Bike, UtensilsCrossed, Wallet as WalletIcon } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { createOrder } from '../api/orders';
 import { getWallet } from '../api/wallet';
@@ -150,6 +150,22 @@ export default function PlaceOrder() {
                 <div style={{ width: '66px', textAlign: 'right', color: colors.accent, fontWeight: 700 }}>
                   ₦{(line.price * line.quantity).toFixed(2)}
                 </div>
+                <button
+                  type="button"
+                  aria-label={`Remove ${line.name} from cart`}
+                  onClick={() => cartCtx.changeQuantity(line.menuItem, -line.quantity)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    color: colors.textMuted,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             </div>
             <Input

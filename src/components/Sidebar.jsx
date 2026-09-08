@@ -3,27 +3,28 @@ import { FaHamburger } from 'react-icons/fa';
 import {
   UtensilsCrossed, PencilLine, ShoppingCart, ClipboardList,
   CreditCard, Receipt, LogOut, Settings, Bell,
-  CalendarDays, Grid, ChefHat, Package, Users, LifeBuoy, BarChart3, FileDown
+  CalendarDays, Grid, ChefHat, Package, Users, LifeBuoy, BarChart3, FileDown, UserCog
 } from 'lucide-react';
 import { colors, font, radius, shadow } from '../styles/tokens';
 import { useAuth } from '../context/AuthContext';
 
 // Exported so AdminLayout can reuse the same list for its mobile drawer/header.
 export const NAV_ITEMS = [
-  { to: '/menu', label: 'Menu', Icon: UtensilsCrossed, roles: ['admin', 'staff', 'customer'] },
+  { to: '/menu', label: 'Menu', Icon: UtensilsCrossed, roles: ['admin', 'waiter', 'kitchen', 'customer'] },
   { to: '/menu-admin', label: 'Manage Menu', Icon: PencilLine, roles: ['admin'] },
   { to: '/order', label: 'Order', Icon: ShoppingCart, roles: ['customer'] },
   { to: '/reservations', label: 'Reservations', Icon: CalendarDays, roles: ['customer'] },
-  { to: '/floor-plan', label: 'Floor Plan', Icon: Grid, roles: ['admin', 'staff'] },
-  { to: '/orders', label: 'Orders', Icon: ClipboardList, roles: ['admin', 'staff'] },
-  { to: '/kitchen', label: 'Kitchen', Icon: ChefHat, roles: ['admin', 'staff'] },
-  { to: '/checkout', label: 'Checkout', Icon: CreditCard, roles: ['admin', 'staff'] },
-  { to: '/transactions', label: 'Transactions', Icon: Receipt, roles: ['admin', 'staff', 'customer'] },
-  { to: '/inventory', label: 'Inventory', Icon: Package, roles: ['admin', 'staff'] },
-  { to: '/customers', label: 'Customers', Icon: Users, roles: ['admin', 'staff'] },
-  { to: '/support', label: 'Support', Icon: LifeBuoy, roles: ['admin', 'staff'] },
-  { to: '/analytics', label: 'Analytics', Icon: BarChart3, roles: ['admin', 'staff'] },
-  { to: '/reports', label: 'Reports', Icon: FileDown, roles: ['admin', 'staff'] },
+  { to: '/floor-plan', label: 'Floor Plan', Icon: Grid, roles: ['admin', 'waiter'] },
+  { to: '/orders', label: 'Orders', Icon: ClipboardList, roles: ['admin', 'waiter', 'kitchen'] },
+  { to: '/kitchen', label: 'Kitchen', Icon: ChefHat, roles: ['admin', 'kitchen'] },
+  { to: '/checkout', label: 'Checkout', Icon: CreditCard, roles: ['admin', 'waiter'] },
+  { to: '/transactions', label: 'Transactions', Icon: Receipt, roles: ['admin', 'waiter', 'customer'] },
+  { to: '/inventory', label: 'Inventory', Icon: Package, roles: ['admin', 'kitchen'] },
+  { to: '/customers', label: 'Customers', Icon: Users, roles: ['admin', 'waiter'] },
+  { to: '/support', label: 'Support', Icon: LifeBuoy, roles: ['admin', 'waiter', 'kitchen'] },
+  { to: '/analytics', label: 'Analytics', Icon: BarChart3, roles: ['admin'] },
+  { to: '/reports', label: 'Reports', Icon: FileDown, roles: ['admin'] },
+  { to: '/users', label: 'Users', Icon: UserCog, roles: ['admin'] },
 ];
 
 function NavItem({ item }) {

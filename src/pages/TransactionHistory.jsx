@@ -14,7 +14,7 @@ export default function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const isStaffOrAdmin = user && (user.role === 'admin' || user.role === 'staff');
+  const isStaffOrAdmin = user && ['admin', 'waiter'].includes(user.role);
   const Layout = isStaffOrAdmin ? AdminLayout : AppLayout;
 
   useEffect(() => {
