@@ -1,51 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingCart, CheckCircle2, Bike, UtensilsCrossed, Wallet as WalletIcon, CreditCard } from 'lucide-react';
+import {
+  Minus, Plus, Trash2, ShoppingCart, CheckCircle2, Bike, UtensilsCrossed,
+  Wallet as WalletIcon, CreditCard, Landmark, Copy,
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { createOrder, payOrderWithCard } from '../api/orders';
+import { createOrder, verifyOrderPayment } from '../api/orders';
 import { getWallet } from '../api/wallet';
 import { colors, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
 import { Card, Button, Input, PageTitle, ErrorText, Thumb, EmptyState } from '../components/ui';
 
-// One pill in the payment-method row. 'active' mirrors the look of the
-// dine-in/delivery toggle above it so the two choices read as the same
-// kind of control.
-function PaymentOption({ active, onClick, Icon, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '11px',
-        borderRadius: radius.pill,
-        border: '1px solid transparent',
-        background: active ? colors.accent : colors.panelAlt,
-        color: active ? '#fff' : colors.textMuted,
-        fontSize: '13px',
-        fontWeight: 600,
-        cursor: 'pointer',
-      }}
-    >
-      {Icon && <Icon size={16} />} {label}
-    </button>
-  );
-}
+const PAYMENT_METHODS = [
+  { value: 'wallet', label: 'Wallet', Icon: WalletIcon },
+  { value: 'paystack', label: 'Card', Icon: CreditCard },
+  { value: 'bank_transfer', label: 'Bank Transfer', Icon: Landmark },
+];
 
 export default function PlaceOrder() {
   const cartCtx = useCart();
-  const { user, updateAddress } = useAuth();
+  const { user } = useAuth();
   const [orderType, setOrderType] = useState('dine-in');
-  // 'table' (pay later, dine-in only) | 'wallet' | 'card'
-  const [paymentMethod, setPaymentMethod] = useState('table');
+  const [paymentMethod, setPaymentMethod] = useState('wallet');
   const [balance, setBalance] = useState(null);
-  const [addressInput, setAddressInput] = useState('');
   const [error, setError] = useState('');
   const [shortfall, setShortfall] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -55,33 +33,11 @@ export default function PlaceOrder() {
     getWallet().then((res) => setBalance(res.balance)).catch(() => {});
   }, []);
 
-  // Prefill from the profile once it loads, without clobbering anything
-  // the person has already typed this session.
-  useEffect(() => {
-    if (user?.address && !addressInput) setAddressInput(user.address);
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // "Pay at table" only makes sense for dine-in — bump to wallet the
-  // moment someone switches to delivery so the button never offers an
-  // invalid combination.
-  useEffect(() => {
-    if (orderType === 'delivery' && paymentMethod === 'table') {
-      setPaymentMethod('wallet');
-    }
-  }, [orderType]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const total = cartCtx.total();
-  const isDelivery = orderType === 'delivery';
-  const hasAddress = Boolean((user?.address || addressInput).trim());
-  const needsAddress = isDelivery && !hasAddress;
 
-  const resetFeedback = () => {
+  const handlePlaceOrder = async () => {
     setError('');
     setShortfall(null);
-  };
-
-  const handleWalletOrTablePay = async () => {
-    resetFeedback();
     setBusy(true);
     try {
       const items = cartCtx.cart.map((line) => ({
@@ -89,96 +45,113 @@ export default function PlaceOrder() {
         quantity: line.quantity,
         customizations: line.customizations,
       }));
-      const order = await createOrder({
-        items,
-        orderType,
-        payWithWallet: paymentMethod === 'wallet',
-        deliveryAddress: isDelivery ? addressInput.trim() : undefined,
-      });
-      if (isDelivery && addressInput.trim() && !user?.address) {
-        updateAddress(addressInput.trim()).catch(() => {});
+
+      const order = await createOrder({ items, orderType, paymentMethod });
+
+      if (paymentMethod === 'paystack') {
+        cartCtx.clearCart();
+        payWithPaystack(order);
+        return;
       }
+
       cartCtx.clearCart();
       setPlaced(order);
     } catch (err) {
-      if (err.response?.status === 402) {
+      if (err.response && err.response.status === 402) {
         const data = err.response.data;
         setError('Not enough wallet balance to cover this order.');
         setShortfall(data.shortfall);
         setBalance(data.balance);
       } else {
-        setError(err.response?.data?.message || err.message);
+        setError(err.message);
       }
-    } finally {
       setBusy(false);
     }
   };
 
-  const handleCardPay = () => {
-    resetFeedback();
-
+  // Opens Paystack's inline popup — the customer types their card number,
+  // expiry and CVV directly in this modal (Paystack handles it securely,
+  // there's no redirect away from the site). On success we verify the
+  // reference server-side, which is the only thing that actually marks
+  // the order as paid.
+  const payWithPaystack = (order) => {
     if (!window.PaystackPop) {
       setError('Payment library not loaded. Refresh and try again.');
+      setBusy(false);
+      setPlaced(order);
       return;
     }
-
-    const items = cartCtx.cart.map((line) => ({
-      menuItem: line.menuItem,
-      quantity: line.quantity,
-      customizations: line.customizations,
-    }));
-    const deliveryAddress = isDelivery ? addressInput.trim() : undefined;
 
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: user.email,
-      amount: Math.round(total * 100), // kobo
-      metadata: { userId: user._id },
+      amount: Math.round(Number(order.totalAmount) * 100), // kobo
+      metadata: { orderId: order._id },
       callback: (response) => {
-        setBusy(true);
-        payOrderWithCard({ reference: response.reference, items, orderType, deliveryAddress })
-          .then((order) => {
-            if (isDelivery && deliveryAddress && !user?.address) {
-              updateAddress(deliveryAddress).catch(() => {});
-            }
-            cartCtx.clearCart();
-            setPlaced(order);
-          })
-          .catch((err) => setError(err.response?.data?.message || err.message))
+        verifyOrderPayment(order._id, response.reference)
+          .then((verified) => setPlaced(verified))
+          .catch((err) => setError(err.message))
           .finally(() => setBusy(false));
       },
-      onClose: () => {},
+      onClose: () => {
+        // Popup dismissed without paying — order still exists as
+        // pending-payment, just show it so they're not stuck on a blank cart.
+        setBusy(false);
+        setPlaced(order);
+      },
     });
 
     handler.openIframe();
   };
 
-  const handleSubmit = () => {
-    if (needsAddress) {
-      setError('Add a delivery address to continue.');
-      return;
-    }
-    if (paymentMethod === 'card') {
-      handleCardPay();
-    } else {
-      handleWalletOrTablePay();
-    }
-  };
-
   if (placed) {
+    const isPendingBankTransfer = placed.paymentMethod === 'bank_transfer' && placed.paymentStatus === 'pending';
+    const isPendingPaystack = placed.paymentMethod === 'paystack' && placed.paymentStatus === 'pending';
+
     return (
       <AppLayout>
         <PageTitle>Order placed</PageTitle>
-        <Card style={{ maxWidth: '440px', textAlign: 'center', padding: '36px 24px' }}>
-          <CheckCircle2 size={44} color={colors.success} strokeWidth={1.6} />
+        <Card style={{ maxWidth: '460px', textAlign: 'center', padding: '36px 24px' }}>
+          <CheckCircle2 size={44} color={isPendingBankTransfer || isPendingPaystack ? colors.textMuted : colors.success} strokeWidth={1.6} />
           <h2 style={{ fontFamily: font.display, fontSize: '18px', margin: '14px 0 8px' }}>
-            Sent to the kitchen
+            {isPendingBankTransfer ? 'Awaiting your transfer' : isPendingPaystack ? 'Payment not completed' : 'Sent to the kitchen'}
           </h2>
           <p style={{ color: colors.textMuted, fontSize: '13px', margin: 0 }}>
             Order #{placed._id.slice(-6)} · Total ₦{Number(placed.totalAmount).toFixed(2)}
-            {placed.paidWithWallet ? ' · Paid from wallet' : ''}
-            {placed.paidWithCard ? ' · Paid by card' : ''}
           </p>
+
+          {isPendingBankTransfer && placed.bankDetails && (
+            <div style={{
+              marginTop: '18px', padding: '16px', borderRadius: radius.sm,
+              background: colors.panelAlt, textAlign: 'left', fontSize: '13px',
+            }}>
+              <div style={{ color: colors.textMuted, marginBottom: '8px' }}>
+                Transfer the exact order total to:
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ color: colors.textMuted }}>Bank</span>
+                <strong>{placed.bankDetails.bankName}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ color: colors.textMuted }}>Account number</span>
+                <strong>{placed.bankDetails.accountNumber}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ color: colors.textMuted }}>Account name</span>
+                <strong>{placed.bankDetails.accountName}</strong>
+              </div>
+              <div style={{ marginTop: '10px', color: colors.textMuted, fontSize: '12px' }}>
+                Your order will be confirmed once we receive the transfer.
+              </div>
+            </div>
+          )}
+
+          {isPendingPaystack && (
+            <div style={{ marginTop: '14px', color: colors.textMuted, fontSize: '12px' }}>
+              You can find and retry this order from your order history.
+            </div>
+          )}
+
           <Link to="/menu" style={{ display: 'inline-block', marginTop: '20px', color: colors.accent, fontWeight: 600, textDecoration: 'none' }}>
             Back to menu →
           </Link>
@@ -205,6 +178,8 @@ export default function PlaceOrder() {
     { value: 'dine-in', label: 'Dine in', Icon: UtensilsCrossed },
     { value: 'delivery', label: 'Delivery', Icon: Bike },
   ];
+
+  const hasEnoughBalance = balance !== null && balance >= total;
 
   return (
     <AppLayout>
@@ -256,22 +231,14 @@ export default function PlaceOrder() {
                 <div style={{ width: '66px', textAlign: 'right', color: colors.accent, fontWeight: 700 }}>
                   ₦{(line.price * line.quantity).toFixed(2)}
                 </div>
-                <button
-                  type="button"
-                  aria-label={`Remove ${line.name} from cart`}
+                <Button
+                  variant="soft"
+                  title="Remove item"
+                  style={{ padding: '6px', color: colors.accent }}
                   onClick={() => cartCtx.changeQuantity(line.menuItem, -line.quantity)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '6px',
-                    cursor: 'pointer',
-                    color: colors.textMuted,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
                 >
-                  <Trash2 size={15} />
-                </button>
+                  <Trash2 size={14} />
+                </Button>
               </div>
             </div>
             <Input
@@ -284,41 +251,57 @@ export default function PlaceOrder() {
         ))}
 
         {/* Payment method */}
-        <div style={{
-          marginTop: '18px',
-          padding: '14px',
-          borderRadius: radius.sm,
-          background: colors.panelAlt,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {!isDelivery && (
-              <PaymentOption active={paymentMethod === 'table'} onClick={() => setPaymentMethod('table')} label="Pay at table" />
-            )}
-            <PaymentOption
-              active={paymentMethod === 'wallet'}
-              onClick={() => setPaymentMethod('wallet')}
-              Icon={WalletIcon}
-              label={`Wallet · ${balance === null ? '—' : `₦${Number(balance).toFixed(2)}`}`}
-            />
-            <PaymentOption active={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')} Icon={CreditCard} label="Pay with card" />
+        <div style={{ marginTop: '18px' }}>
+          <div style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '10px' }}>Pay with</div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {PAYMENT_METHODS.map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                onClick={() => setPaymentMethod(value)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '12px 8px',
+                  borderRadius: radius.sm,
+                  border: `1px solid ${paymentMethod === value ? colors.accent : colors.border}`,
+                  background: paymentMethod === value ? `${colors.accent}15` : colors.panelAlt,
+                  color: paymentMethod === value ? colors.accent : colors.textMuted,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon size={18} /> {label}
+              </button>
+            ))}
           </div>
 
-          {isDelivery && (
-            <div style={{ fontSize: '12px', color: colors.textMuted }}>
-              Delivery orders are paid upfront, by wallet or card.
+          {paymentMethod === 'wallet' && (
+            <div style={{
+              marginTop: '12px', padding: '12px 14px', borderRadius: radius.sm,
+              background: colors.panelAlt, display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', fontSize: '13px',
+            }}>
+              <span style={{ color: colors.textMuted }}>Wallet balance</span>
+              <span style={{ fontWeight: 700, color: hasEnoughBalance ? colors.text : colors.accent }}>
+                {balance === null ? '—' : `₦${Number(balance).toFixed(2)}`}
+              </span>
             </div>
           )}
 
-          {needsAddress && (
-            <Input
-              label="Delivery address"
-              placeholder="Street, city, landmark"
-              value={addressInput}
-              onChange={(e) => setAddressInput(e.target.value)}
-            />
+          {paymentMethod === 'bank_transfer' && (
+            <div style={{ marginTop: '12px', fontSize: '12px', color: colors.textMuted }}>
+              Bank details are shown after you confirm — your order will be marked pending until we receive the transfer.
+            </div>
+          )}
+
+          {paymentMethod === 'paystack' && (
+            <div style={{ marginTop: '12px', fontSize: '12px', color: colors.textMuted }}>
+              You'll enter your card details in a secure popup on this page.
+            </div>
           )}
         </div>
 
@@ -339,29 +322,19 @@ export default function PlaceOrder() {
             background: `${colors.accent}15`,
             fontSize: '13px',
           }}>
-            You need ₦{Number(shortfall).toFixed(2)} more in your wallet, or{' '}
-            <button
-              type="button"
-              onClick={() => setPaymentMethod('card')}
-              style={{ background: 'none', border: 'none', padding: 0, color: colors.accent, fontWeight: 700, cursor: 'pointer' }}
-            >
-              pay with card instead →
-            </button>
+            You need ₦{Number(shortfall).toFixed(2)} more in your wallet.{' '}
+            <Link to="/wallet" style={{ color: colors.accent, fontWeight: 700, textDecoration: 'none' }}>
+              Top up now →
+            </Link>
           </div>
         )}
 
         <Button
           style={{ marginTop: '16px', width: '100%', padding: '14px' }}
-          onClick={handleSubmit}
+          onClick={handlePlaceOrder}
           disabled={busy}
         >
-          {busy
-            ? 'Placing order…'
-            : paymentMethod === 'card'
-            ? 'Pay with card'
-            : paymentMethod === 'wallet'
-            ? 'Pay & confirm order'
-            : 'Confirm order'}
+          {busy ? 'Placing order…' : paymentMethod === 'wallet' ? 'Pay & confirm order' : 'Confirm order'}
         </Button>
       </Card>
     </AppLayout>
