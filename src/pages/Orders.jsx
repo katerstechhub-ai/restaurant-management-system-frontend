@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff, MapPin, Wallet as WalletIcon, CreditCard } from 'lucide-react';
+import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff, Check } from 'lucide-react';
 import { getOrders, updateOrderStatus } from '../api/orders';
 import { optimizedImage } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +10,13 @@ import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState } from '../c
 
 const STATUSES = ['pending', 'preparing', 'ready', 'completed'];
 
-// Same treatment as the menu cards: rounded square, cropped photo, and an
-// icon medallion fallback when the item has no image.
+const TRACK_STEPS = [
+  { key: 'pending', label: 'Placed', timeKey: 'createdAt' },
+  { key: 'preparing', label: 'Preparing', timeKey: 'preparingAt' },
+  { key: 'ready', label: 'Ready', timeKey: 'readyAt' },
+  { key: 'completed', label: 'Completed', timeKey: 'completedAt' },
+];
+
 function ItemThumb({ src, alt, size = 52 }) {
   return (
     <div
@@ -42,8 +47,6 @@ function ItemThumb({ src, alt, size = 52 }) {
   );
 }
 
-// Small pill toggle used to reveal/hide completed orders. Kept local to this
-// file since it's a one-off control, styled to match Select/StatusPill.
 function ShowCompletedToggle({ show, onToggle, count }) {
   return (
     <button
@@ -70,27 +73,64 @@ function ShowCompletedToggle({ show, onToggle, count }) {
   );
 }
 
-// How this order was paid for — or that it wasn't yet (dine-in, pay at
-// table). Distinct from StatusPill, which tracks kitchen progress, not money.
-function PaymentBadge({ order }) {
-  let Icon = Clock;
-  let label = 'Pay at table';
-  let color = colors.textMuted;
-
-  if (order.paidWithCard) {
-    Icon = CreditCard;
-    label = 'Paid · card';
-    color = colors.accent;
-  } else if (order.paidWithWallet) {
-    Icon = WalletIcon;
-    label = 'Paid · wallet';
-    color = colors.success ?? '#3fb950';
+// Step tracker shown to customers on their own orders — Placed → Preparing
+// → Ready → Completed, each stamped with when it happened once reached.
+// Cancelled orders get their own single-state banner instead of the tracker.
+function OrderTracker({ order }) {
+  if (order.status === 'cancelled') {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '10px 14px', borderRadius: radius.sm,
+        background: `${colors.accent}15`, color: colors.accent,
+        fontSize: '12.5px', fontWeight: 600, marginTop: '10px',
+      }}>
+        Order cancelled
+      </div>
+    );
   }
 
+  const currentIndex = TRACK_STEPS.findIndex((s) => s.key === order.status);
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color, fontSize: '12px', fontWeight: 600 }}>
-      <Icon size={13} />
-      {label}
+    <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '14px', gap: '4px' }}>
+      {TRACK_STEPS.map((step, i) => {
+        const reached = i <= currentIndex;
+        const time = order[step.timeKey];
+        return (
+          <div key={step.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              <div style={{
+                flex: i === 0 ? 0 : 1,
+                height: '2px',
+                background: i === 0 ? 'transparent' : (reached ? colors.accent : colors.border),
+              }} />
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: reached ? colors.accent : colors.panelAlt,
+                border: `1px solid ${reached ? colors.accent : colors.border}`,
+              }}>
+                {reached && <Check size={12} color="#fff" />}
+              </div>
+              <div style={{
+                flex: i === TRACK_STEPS.length - 1 ? 0 : 1,
+                height: '2px',
+                background: i >= currentIndex ? colors.border : colors.accent,
+              }} />
+            </div>
+            <div style={{
+              marginTop: '6px', fontSize: '11px', fontWeight: reached ? 700 : 500,
+              color: reached ? colors.text : colors.textMuted, textAlign: 'center',
+            }}>
+              {step.label}
+            </div>
+            <div style={{ fontSize: '10px', color: colors.textMuted, marginTop: '2px' }}>
+              {time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -112,6 +152,17 @@ export default function Orders() {
   };
 
   useEffect(load, []);
+
+  // Customers watching an active order benefit from knowing it's moving —
+  // light polling instead of a full manual refresh. Staff dashboards don't
+  // need this since they're the ones causing the changes.
+  useEffect(() => {
+    if (canManage) return;
+    const hasActiveOrder = orders.some((o) => !['completed', 'cancelled'].includes(o.status));
+    if (!hasActiveOrder) return;
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [canManage, orders]);
 
   const handleStatusChange = async (orderId, status) => {
     setError('');
@@ -221,15 +272,12 @@ export default function Orders() {
                     <span style={{ textTransform: 'capitalize' }}>{order.orderType}</span>
                     <span>·</span>
                     <span style={{ color: colors.accent, fontWeight: 700 }}>₦{Number(order.totalAmount).toFixed(2)}</span>
-                  </div>
-                  {order.orderType === 'delivery' && order.deliveryAddress && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: colors.textMuted, fontSize: '12px', marginTop: '6px', maxWidth: '360px' }}>
-                      <MapPin size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
-                      <span>{order.deliveryAddress}</span>
-                    </div>
-                  )}
-                  <div style={{ marginTop: '6px' }}>
-                    <PaymentBadge order={order} />
+                    {order.paymentStatus === 'pending' && (
+                      <>
+                        <span>·</span>
+                        <span style={{ color: colors.accent }}>Payment pending</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -249,6 +297,8 @@ export default function Orders() {
                 )}
               </div>
             </div>
+
+            {!canManage && <OrderTracker order={order} />}
           </Card>
         ))
       )}
