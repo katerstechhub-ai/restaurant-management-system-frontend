@@ -37,6 +37,16 @@ export async function assignWalkIn(data) {
   return res.data;
 }
 
+export async function releaseTable(tableId) {
+  const res = await client.post('/tables/release', { tableId });
+  return res.data;
+}
+
+export async function updateTableStatus(tableId, status) {
+  const res = await client.patch('/tables/status', { tableId, status });
+  return res.data;
+}
+
 // Kitchen Dashboard
 export async function getKitchenOrders() {
   const res = await client.get('/kitchen/queue');

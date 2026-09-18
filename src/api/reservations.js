@@ -18,9 +18,13 @@ export async function getMyReservations() {
   return res.data;
 }
 
-// Admin/waiter/kitchen only — every reservation, optionally filtered to one date.
-export async function getAllReservations(date) {
-  const res = await client.get('/reservations', { params: date ? { date } : {} });
+// Admin/waiter/kitchen only — every reservation, optionally filtered to one
+// date. Cancelled reservations are excluded unless includeCancelled is set.
+export async function getAllReservations(date, includeCancelled = false) {
+  const params = {};
+  if (date) params.date = date;
+  if (includeCancelled) params.includeCancelled = 'true';
+  const res = await client.get('/reservations', { params });
   return res.data;
 }
 
