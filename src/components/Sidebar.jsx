@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { to: '/analytics', label: 'Analytics', Icon: BarChart3, roles: ['admin'] },
   { to: '/reports', label: 'Reports', Icon: FileDown, roles: ['admin'] },
   { to: '/users', label: 'Users', Icon: UserCog, roles: ['admin'] },
+  { to: '/reservations-manage', label: 'Reservations', Icon: CalendarDays, roles: ['admin', 'waiter', 'kitchen'] },
 ];
 
 function NavItem({ item }) {

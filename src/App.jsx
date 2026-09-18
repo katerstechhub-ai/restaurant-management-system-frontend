@@ -6,10 +6,12 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import { colors } from './styles/tokens';
 
+
 // Every page is its own chunk now instead of one bundle carrying the whole
 // app (auth pages + every admin dashboard + charts) upfront. Landing/Login
 // still load fast since their chunks are tiny; heavier pages like
 // Analytics (recharts) only load when someone actually visits /analytics.
+const StaffReservations = lazy(() => import('./pages/StaffReservations'));
 const Login = lazy(() => import('./pages/Login'));
 const Landing = lazy(() => import('./pages/Landing'));
 const Register = lazy(() => import('./pages/Register'));
@@ -72,6 +74,7 @@ export default function App() {
                 <Route path="/analytics" element={<ProtectedRoute roles={['admin']}><Analytics /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute roles={['admin']}><Reports /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
+                <Route path="/reservations-manage" element={<ProtectedRoute roles={['admin', 'waiter', 'kitchen']}><StaffReservations /></ProtectedRoute>} />
 
                 <Route path="*" element={<Navigate to="/menu" replace />} />
               </Routes>
