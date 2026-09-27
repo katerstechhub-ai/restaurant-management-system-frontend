@@ -50,6 +50,10 @@ export default function AdminLayout({ title, action, children }) {
     fontSize: '14px', whiteSpace: 'nowrap',
   });
 
+  // Matches Sidebar.jsx's brand block exactly (icon + "foodie" + role label
+  // underneath) — this was previously missing the role line entirely, since
+  // this Brand is a separate definition used only by the mobile drawer below
+  // (desktop renders <Sidebar/> directly, which already had the role line).
   const Brand = (
     <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: spacing(2), minWidth: 0, textDecoration: 'none' }}>
       <div style={{
@@ -58,11 +62,16 @@ export default function AdminLayout({ title, action, children }) {
       }}>
         <FaHamburger size={16} color="#fff" />
       </div>
-      <span style={{
-        fontFamily: font.display, fontWeight: 700, fontSize: '16px',
-        color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}>foodie</span>
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
+        <div style={{
+          fontFamily: font.display, fontWeight: 700, fontSize: '16px',
+          color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>foodie</div>
+        <div style={{ color: colors.textMuted, fontSize: '11px', textTransform: 'capitalize' }}>
+          {user ? user.role : 'Guest'}
+        </div>
+      </div>
     </Link>
   );
 
