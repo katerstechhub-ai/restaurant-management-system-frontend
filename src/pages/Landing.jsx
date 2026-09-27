@@ -7,6 +7,8 @@ import { optimizedImage } from '../utils/cloudinary';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import './Landing.css';
+import './Landing.mobile.css';
+import CardNav from '../components/ui/CardNav';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -45,8 +47,8 @@ export default function Landing() {
   return (
     <div className="landing-page">
       <div className="landing-container">
-        {/* Navbar */}
-        <nav className="landing-nav">
+        {/* Original desktop navbar */}
+        <nav className="landing-nav landing-desktop-nav">
           <div className="landing-logo">
             <span className="icon"><FaHamburger /></span> foodie
           </div>
@@ -58,46 +60,55 @@ export default function Landing() {
             <a href="#contact">Contact us</a>
           </div>
           {user ? (
-            <div
-              className="btn-login"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'default' }}
-            >
+            <div className="btn-login landing-user-menu">
               <span>Hi, {user.name}</span>
-              {user.role === 'admin' && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: '#E84A3B',
-                    color: '#fff',
-                    padding: '2px 8px',
-                    borderRadius: 12,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Admin
-                </span>
-              )}
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#777',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  padding: 0,
-                  textDecoration: 'underline',
-                }}
-              >
-                Log out
-              </button>
+              {user.role === 'admin' && <span className="landing-admin-badge">Admin</span>}
+              <button type="button" onClick={handleLogout} className="landing-logout-button">Log out</button>
             </div>
           ) : (
             <Link to="/login" className="btn-login">Login</Link>
           )}
         </nav>
+
+        {/* React Bits CardNav is intentionally mobile-only */}
+        <div className="landing-mobile-card-nav">
+          <CardNav
+            items={[
+              {
+                label: 'Explore',
+                bgColor: '#FFE4C2',
+                textColor: '#3b2415',
+                links: [
+                  { label: 'Our menu', href: '/menu', ariaLabel: 'Open our menu' },
+                  { label: 'Best sellers', href: '#menu', ariaLabel: 'See best sellers' },
+                ],
+              },
+              {
+                label: 'Foodie',
+                bgColor: '#E84A3B',
+                textColor: '#fff',
+                links: [
+                  { label: 'Why choose us', href: '#about', ariaLabel: 'Why choose Foodie' },
+                  { label: 'Customer feedback', href: '#pages', ariaLabel: 'Read customer feedback' },
+                ],
+              },
+              {
+                label: 'Account',
+                bgColor: '#DFF1E5',
+                textColor: '#193a27',
+                links: [
+                  { label: user ? 'My account' : 'Log in', href: user ? '/profile' : '/login', ariaLabel: user ? 'Open my account' : 'Open login' },
+                  { label: 'Contact us', href: '#contact', ariaLabel: 'Contact Foodie' },
+                ],
+              },
+            ]}
+            baseColor="#fffaf5"
+            menuColor="#1f1a17"
+            buttonBgColor="#1f1a17"
+            buttonTextColor="#fff"
+            ease="power3.out"
+          />
+        </div>
 
         {/* Hero Section */}
         <section className="hero-section">
