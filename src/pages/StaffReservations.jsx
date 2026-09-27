@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays, Eye, EyeOff } from 'lucide-react';
-import { getAllReservations } from '../api/reservations';
+import { getAllReservations, confirmReservationPayment } from '../api/reservations';
 import { colors, statusColor, font, radius } from '../styles/tokens';
 import AdminLayout from '../components/AdminLayout';
-import { Card, Input, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
+import { Card, Input, Button, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
 
 // Fixed slots, matching Reservations.jsx (the customer-facing page) so
 // labels are consistent everywhere a timeSlot value shows up.
@@ -28,6 +28,7 @@ export default function StaffReservations() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -39,6 +40,19 @@ export default function StaffReservations() {
   };
 
   useEffect(load, [date, showAllDates, showCancelled]);
+
+  const handleConfirmPayment = async (id) => {
+    setConfirmingId(id);
+    setError('');
+    try {
+      await confirmReservationPayment(id);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const timeSlotLabel = (value) => TIME_SLOTS[value] || value;
 
@@ -107,23 +121,43 @@ export default function StaffReservations() {
           hint={showAllDates ? 'No reservations have been made yet.' : 'No reservations for this date.'}
         />
       ) : (
-        reservations.map((r) => (
-          <Card key={r._id} hover style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontFamily: font.display, fontWeight: 700 }}>
-                  Table {r.table?.tableNumber ?? '—'} {r.table?.capacity ? `· seats ${r.table.capacity}` : ''}
-                  {r.customer?.name ? ` · ${r.customer.name}` : ''}
+        reservations.map((r) => {
+          const needsConfirmation = r.paymentMethod === 'bank_transfer' && r.paymentStatus === 'pending';
+          return (
+            <Card key={r._id} hover style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontFamily: font.display, fontWeight: 700 }}>
+                    Table {r.table?.tableNumber ?? '—'} {r.table?.capacity ? `· seats ${r.table.capacity}` : ''}
+                    {r.customer?.name ? ` · ${r.customer.name}` : ''}
+                  </div>
+                  <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '5px' }}>
+                    {r.date ? new Date(r.date).toLocaleDateString() : ''} · {timeSlotLabel(r.timeSlot)} · ₦{Number(r.amount).toFixed(2)}
+                    {r.customer?.email ? ` · ${r.customer.email}` : ''}
+                  </div>
+                  <div style={{
+                    fontSize: '12px', marginTop: '4px',
+                    color: r.paymentStatus === 'paid' ? (colors.success || '#4caf50') : colors.accent,
+                  }}>
+                    {r.paymentStatus === 'paid' ? '✓ Payment received' : r.paymentStatus === 'failed' ? 'Payment failed' : `Payment pending (${r.paymentMethod.replace('_', ' ')})`}
+                  </div>
                 </div>
-                <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '5px' }}>
-                  {r.date ? new Date(r.date).toLocaleDateString() : ''} · {timeSlotLabel(r.timeSlot)}
-                  {r.customer?.email ? ` · ${r.customer.email}` : ''}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <StatusPill status={r.status} color={statusColor(r.status)} />
+                  {needsConfirmation && (
+                    <Button
+                      variant="soft"
+                      disabled={confirmingId === r._id}
+                      onClick={() => handleConfirmPayment(r._id)}
+                    >
+                      {confirmingId === r._id ? 'Confirming…' : 'Confirm payment received'}
+                    </Button>
+                  )}
                 </div>
               </div>
-              <StatusPill status={r.status} color={statusColor(r.status)} />
-            </div>
-          </Card>
-        ))
+            </Card>
+          );
+        })
       )}
     </AdminLayout>
   );

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ClipboardList, Clock, Bike, UtensilsCrossed, Eye, EyeOff, Check } from 'lucide-react';
-import { getOrders, updateOrderStatus } from '../api/orders';
+import { getOrders, updateOrderStatus, confirmBankTransferPayment } from '../api/orders';
 import { optimizedImage } from '../utils/cloudinary';
 import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
 import AdminLayout from '../components/AdminLayout';
-import { Card, Select, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
+import { Card, Select, Button, StatusPill, PageTitle, ErrorText, EmptyState } from '../components/ui';
 
 const STATUSES = ['pending', 'preparing', 'ready', 'completed'];
 
@@ -141,6 +141,7 @@ export default function Orders() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [confirmingId, setConfirmingId] = useState(null);
   const canManage = user && ['admin', 'waiter', 'kitchen'].includes(user.role);
   const Layout = canManage ? AdminLayout : AppLayout;
 
@@ -171,6 +172,19 @@ export default function Orders() {
       load();
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleConfirmPayment = async (orderId) => {
+    setConfirmingId(orderId);
+    setError('');
+    try {
+      await confirmBankTransferPayment(orderId);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -232,75 +246,95 @@ export default function Orders() {
           hint={`All ${completedCount} orders are completed. Toggle "Show completed" above to see them.`}
         />
       ) : (
-        visibleOrders.map((order) => (
-          <Card key={order._id} hover style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '14px', minWidth: 0 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                  {order.items.slice(0, 3).map((it, idx) => (
-                    <ItemThumb
-                      key={idx}
-                      src={it.menuItem && it.menuItem.image}
-                      alt={(it.menuItem && it.menuItem.name) || 'Item'}
-                    />
-                  ))}
-                  {order.items.length > 3 && (
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        fontSize: '11px',
-                        color: colors.textMuted,
-                        fontWeight: 600,
-                      }}
-                    >
-                      +{order.items.length - 3}
-                    </div>
-                  )}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: font.display, fontWeight: 700 }}>
-                    Order #{order._id.slice(-6)}
-                    {order.customer && order.customer.name ? ` · ${order.customer.name}` : ''}
-                  </div>
-                  <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '5px' }}>
-                    {order.items
-                      .map((it) => `${it.quantity}x ${it.menuItem && it.menuItem.name ? it.menuItem.name : 'Item'}`)
-                      .join(', ')}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textMuted, fontSize: '12px', marginTop: '6px' }}>
-                    {order.orderType === 'delivery' ? <Bike size={13} /> : <UtensilsCrossed size={13} />}
-                    <span style={{ textTransform: 'capitalize' }}>{order.orderType}</span>
-                    <span>·</span>
-                    <span style={{ color: colors.accent, fontWeight: 700 }}>₦{Number(order.totalAmount).toFixed(2)}</span>
-                    {order.paymentStatus === 'pending' && (
-                      <>
-                        <span>·</span>
-                        <span style={{ color: colors.accent }}>Payment pending</span>
-                      </>
+        visibleOrders.map((order) => {
+          const needsConfirmation = canManage && order.paymentMethod === 'bank_transfer' && order.paymentStatus === 'pending';
+          return (
+            <Card key={order._id} hover style={{ marginBottom: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '14px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                    {order.items.slice(0, 3).map((it, idx) => (
+                      <ItemThumb
+                        key={idx}
+                        src={it.menuItem && it.menuItem.image}
+                        alt={(it.menuItem && it.menuItem.name) || 'Item'}
+                      />
+                    ))}
+                    {order.items.length > 3 && (
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: '11px',
+                          color: colors.textMuted,
+                          fontWeight: 600,
+                        }}
+                      >
+                        +{order.items.length - 3}
+                      </div>
                     )}
                   </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: font.display, fontWeight: 700 }}>
+                      Order #{order._id.slice(-6)}
+                      {order.customer && order.customer.name ? ` · ${order.customer.name}` : ''}
+                    </div>
+                    <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '5px' }}>
+                      {order.items
+                        .map((it) => `${it.quantity}x ${it.menuItem && it.menuItem.name ? it.menuItem.name : 'Item'}`)
+                        .join(', ')}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: colors.textMuted, fontSize: '12px', marginTop: '6px' }}>
+                      {order.orderType === 'delivery' ? <Bike size={13} /> : <UtensilsCrossed size={13} />}
+                      <span style={{ textTransform: 'capitalize' }}>{order.orderType}</span>
+                      <span>·</span>
+                      <span style={{ color: colors.accent, fontWeight: 700 }}>₦{Number(order.totalAmount).toFixed(2)}</span>
+                      {order.paymentStatus === 'pending' && (
+                        <>
+                          <span>·</span>
+                          <span style={{ color: colors.accent }}>
+                            {canManage ? `Payment pending (${order.paymentMethod?.replace('_', ' ')})` : 'Payment pending'}
+                          </span>
+                        </>
+                      )}
+                      {order.paymentStatus === 'paid' && !canManage && (
+                        <>
+                          <span>·</span>
+                          <span style={{ color: colors.success || '#4caf50' }}>✓ Payment received</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <StatusPill status={order.status} color={statusColor(order.status)} />
+                  {needsConfirmation && (
+                    <Button
+                      variant="soft"
+                      disabled={confirmingId === order._id}
+                      onClick={() => handleConfirmPayment(order._id)}
+                    >
+                      {confirmingId === order._id ? 'Confirming…' : 'Confirm payment'}
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Select
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                      style={{ padding: '9px 12px', width: 'auto', borderRadius: radius.pill }}
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </Select>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <StatusPill status={order.status} color={statusColor(order.status)} />
-                {canManage && (
-                  <Select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                    style={{ padding: '9px 12px', width: 'auto', borderRadius: radius.pill }}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </Select>
-                )}
-              </div>
-            </div>
-
-            {!canManage && <OrderTracker order={order} />}
-          </Card>
-        ))
+              {!canManage && <OrderTracker order={order} />}
+            </Card>
+          );
+        })
       )}
     </Layout>
   );

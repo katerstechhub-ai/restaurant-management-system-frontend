@@ -6,8 +6,7 @@ export async function getAvailableSlots(date) {
 }
 
 // The seat-map endpoint — every table annotated as available/booked/unavailable
-// for a specific date + timeSlot. Was missing entirely; Reservations.jsx
-// already called this expecting it to exist.
+// for a specific date + timeSlot, plus the current reservation fee.
 export async function getTableAvailability({ date, timeSlot }) {
   const res = await client.get('/reservations/availability', { params: { date, timeSlot } });
   return res.data;
@@ -28,8 +27,20 @@ export async function getAllReservations(date, includeCancelled = false) {
   return res.data;
 }
 
-export async function createReservation({ tableId, date, timeSlot }) {
-  const res = await client.post('/reservations', { tableId, date, timeSlot });
+export async function createReservation({ tableId, date, timeSlot, paymentMethod }) {
+  const res = await client.post('/reservations', { tableId, date, timeSlot, paymentMethod });
+  return res.data;
+}
+
+export async function verifyReservationPayment(reservationId, reference) {
+  const res = await client.post(`/reservations/${reservationId}/verify-payment`, { reference });
+  return res.data;
+}
+
+// Admin/waiter only — marks a bank_transfer reservation as paid once the
+// transfer has actually been seen.
+export async function confirmReservationPayment(reservationId) {
+  const res = await client.patch(`/reservations/${reservationId}/confirm-payment`);
   return res.data;
 }
 
