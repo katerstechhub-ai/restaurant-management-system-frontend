@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, Users2, CheckCircle2 } from 'lucide-react';
-import { getTableAvailability, getMyReservations, createReservation, cancelReservation } from '../api/reservations';
+import {
+  CalendarDays, Users2, CheckCircle2,
+  Wallet as WalletIcon, CreditCard, Landmark,
+} from 'lucide-react';
+import {
+  getTableAvailability, getMyReservations, createReservation,
+  verifyReservationPayment, cancelReservation,
+} from '../api/reservations';
+import { getWallet } from '../api/wallet';
+import { useAuth } from '../context/AuthContext';
 import { colors, statusColor, radius, font } from '../styles/tokens';
 import AppLayout from '../components/AppLayout';
 import SeatingMap from '../components/SeatingMap';
@@ -19,18 +27,28 @@ const TIME_SLOTS = [
   { value: '21:00', label: '9:00 PM — Dinner' },
 ];
 
+const PAYMENT_METHODS = [
+  { value: 'wallet', label: 'Wallet', Icon: WalletIcon },
+  { value: 'paystack', label: 'Card', Icon: CreditCard },
+  { value: 'bank_transfer', label: 'Bank Transfer', Icon: Landmark },
+];
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default function Reservations() {
+  const { user } = useAuth();
   const [date, setDate] = useState(todayISO());
   const [timeSlot, setTimeSlot] = useState(TIME_SLOTS[0].value);
   const [tables, setTables] = useState([]);
+  const [fee, setFee] = useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
   const [mapLoading, setMapLoading] = useState(true);
   const [mapError, setMapError] = useState('');
 
+  const [paymentMethod, setPaymentMethod] = useState('wallet');
+  const [balance, setBalance] = useState(null);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState('');
   const [justBooked, setJustBooked] = useState(null);
@@ -44,7 +62,10 @@ export default function Reservations() {
     setMapError('');
     setSelectedTable(null);
     getTableAvailability({ date, timeSlot })
-      .then((data) => setTables(data.tables || []))
+      .then((data) => {
+        setTables(data.tables || []);
+        setFee(data.fee ?? null);
+      })
       .catch((err) => setMapError(err.message))
       .finally(() => setMapLoading(false));
   };
@@ -59,6 +80,19 @@ export default function Reservations() {
 
   useEffect(loadAvailability, [date, timeSlot]);
   useEffect(loadMyReservations, []);
+  useEffect(() => {
+    getWallet().then((res) => setBalance(res.balance)).catch(() => {});
+  }, []);
+
+  // Reservations still awaiting confirmation (bank transfer pending staff
+  // review) benefit from the same light polling pattern Orders.jsx uses,
+  // so "payment received" appears without a manual refresh.
+  useEffect(() => {
+    const hasPending = myReservations.some((r) => r.paymentStatus === 'pending' && r.status === 'confirmed');
+    if (!hasPending) return;
+    const interval = setInterval(loadMyReservations, 15000);
+    return () => clearInterval(interval);
+  }, [myReservations]);
 
   const handleSelectTable = (table) => {
     setJustBooked(null);
@@ -66,14 +100,61 @@ export default function Reservations() {
     setSelectedTable((prev) => (prev && prev._id === table._id ? null : table));
   };
 
+  // Opens Paystack's inline popup for the reservation fee — same pattern
+  // used at checkout, customer types their card directly, no redirect.
+  const payWithPaystack = (reservation) => {
+    if (!window.PaystackPop) {
+      setBookError('Payment library not loaded. Refresh and try again.');
+      setBooking(false);
+      setJustBooked(reservation);
+      return;
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: Math.round(Number(reservation.amount) * 100), // kobo
+      metadata: { reservationId: reservation._id },
+      callback: (response) => {
+        verifyReservationPayment(reservation._id, response.reference)
+          .then((verified) => setJustBooked(verified))
+          .catch((err) => setBookError(err.message))
+          .finally(() => {
+            setBooking(false);
+            loadAvailability();
+            loadMyReservations();
+          });
+      },
+      onClose: () => {
+        setBooking(false);
+        setJustBooked(reservation);
+        loadAvailability();
+        loadMyReservations();
+      },
+    });
+
+    handler.openIframe();
+  };
+
   const handleConfirm = async () => {
     if (!selectedTable) return;
     setBooking(true);
     setBookError('');
     try {
-      const reservation = await createReservation({ tableId: selectedTable._id, date, timeSlot });
-      setJustBooked(reservation);
+      const reservation = await createReservation({
+        tableId: selectedTable._id,
+        date,
+        timeSlot,
+        paymentMethod,
+      });
       setSelectedTable(null);
+
+      if (paymentMethod === 'paystack') {
+        payWithPaystack(reservation);
+        return;
+      }
+
+      setJustBooked(reservation);
       loadAvailability();
       loadMyReservations();
     } catch (err) {
@@ -98,6 +179,7 @@ export default function Reservations() {
   };
 
   const timeSlotLabel = (value) => TIME_SLOTS.find((s) => s.value === value)?.label || value;
+  const hasEnoughBalance = balance !== null && fee !== null && balance >= fee;
 
   return (
     <AppLayout>
@@ -146,26 +228,89 @@ export default function Reservations() {
         )}
 
         {selectedTable && (
-          <div
-            style={{
-              marginTop: '18px',
-              padding: '14px',
-              borderRadius: radius.sm,
-              background: colors.panelAlt,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '14px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: colors.textMuted }}>
-              <Users2 size={15} />
-              Table {selectedTable.tableNumber} · seats {selectedTable.capacity} · {timeSlotLabel(timeSlot)} on {date}
+          <div style={{ marginTop: '18px' }}>
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: radius.sm,
+                background: colors.panelAlt,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '14px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: colors.textMuted }}>
+                <Users2 size={15} />
+                Table {selectedTable.tableNumber} · seats {selectedTable.capacity} · {timeSlotLabel(timeSlot)} on {date}
+              </div>
+              {fee !== null && (
+                <div style={{ fontFamily: font.display, fontWeight: 700, color: colors.accent }}>
+                  ₦{Number(fee).toFixed(2)} fee
+                </div>
+              )}
             </div>
-            <Button onClick={handleConfirm} disabled={booking}>
-              {booking ? 'Booking…' : 'Confirm reservation'}
-            </Button>
+
+            <div style={{ marginTop: '14px' }}>
+              <div style={{ color: colors.textMuted, fontSize: '13px', marginBottom: '10px' }}>Pay with</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {PAYMENT_METHODS.map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    onClick={() => setPaymentMethod(value)}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '12px 8px',
+                      borderRadius: radius.sm,
+                      border: `1px solid ${paymentMethod === value ? colors.accent : colors.border}`,
+                      background: paymentMethod === value ? `${colors.accent}15` : colors.panelAlt,
+                      color: paymentMethod === value ? colors.accent : colors.textMuted,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Icon size={18} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {paymentMethod === 'wallet' && (
+                <div style={{
+                  marginTop: '12px', padding: '12px 14px', borderRadius: radius.sm,
+                  background: colors.panelAlt, display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', fontSize: '13px',
+                }}>
+                  <span style={{ color: colors.textMuted }}>Wallet balance</span>
+                  <span style={{ fontWeight: 700, color: hasEnoughBalance ? colors.text : colors.accent }}>
+                    {balance === null ? '—' : `₦${Number(balance).toFixed(2)}`}
+                  </span>
+                </div>
+              )}
+
+              {paymentMethod === 'bank_transfer' && (
+                <div style={{ marginTop: '12px', fontSize: '12px', color: colors.textMuted }}>
+                  Bank details are shown after you confirm — your table stays held until we receive the transfer.
+                </div>
+              )}
+
+              {paymentMethod === 'paystack' && (
+                <div style={{ marginTop: '12px', fontSize: '12px', color: colors.textMuted }}>
+                  You'll enter your card details in a secure popup on this page.
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end' }}>
+              <Button onClick={handleConfirm} disabled={booking}>
+                {booking ? 'Booking…' : 'Confirm & pay reservation'}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -177,17 +322,43 @@ export default function Reservations() {
               marginTop: '14px',
               padding: '14px',
               borderRadius: radius.sm,
-              background: `${colors.success || '#4caf50'}15`,
-              color: colors.success || '#4caf50',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
+              background: justBooked.paymentStatus === 'paid' ? `${colors.success || '#4caf50'}15` : `${colors.accent}15`,
+              color: justBooked.paymentStatus === 'paid' ? (colors.success || '#4caf50') : colors.accent,
               fontSize: '13px',
-              fontWeight: 600,
             }}
           >
-            <CheckCircle2 size={16} />
-            Reservation confirmed for {timeSlotLabel(justBooked.timeSlot)} on {justBooked.date?.slice(0, 10)}.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600 }}>
+              <CheckCircle2 size={16} />
+              {justBooked.paymentStatus === 'paid'
+                ? `Reservation confirmed and paid for ${timeSlotLabel(justBooked.timeSlot)} on ${justBooked.date?.slice(0, 10)}.`
+                : `Reservation held for ${timeSlotLabel(justBooked.timeSlot)} on ${justBooked.date?.slice(0, 10)} — payment pending.`}
+            </div>
+
+            {justBooked.bankDetails && justBooked.paymentStatus === 'pending' && (
+              <div style={{
+                marginTop: '12px', padding: '14px', borderRadius: radius.sm,
+                background: colors.panelAlt, textAlign: 'left', color: colors.text,
+              }}>
+                <div style={{ color: colors.textMuted, marginBottom: '8px' }}>
+                  Transfer the exact fee to:
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                  <span style={{ color: colors.textMuted }}>Bank</span>
+                  <strong>{justBooked.bankDetails.bankName}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                  <span style={{ color: colors.textMuted }}>Account number</span>
+                  <strong>{justBooked.bankDetails.accountNumber}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                  <span style={{ color: colors.textMuted }}>Account name</span>
+                  <strong>{justBooked.bankDetails.accountName}</strong>
+                </div>
+                <div style={{ marginTop: '10px', color: colors.textMuted, fontSize: '12px' }}>
+                  You'll see "Payment received" below in My Reservations once we confirm it.
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
@@ -209,7 +380,10 @@ export default function Reservations() {
                   Table {r.table?.tableNumber ?? '—'} {r.table?.capacity ? `· seats ${r.table.capacity}` : ''}
                 </div>
                 <div style={{ color: colors.textMuted, fontSize: '13px', marginTop: '5px' }}>
-                  {r.date ? new Date(r.date).toLocaleDateString() : ''} · {timeSlotLabel(r.timeSlot)}
+                  {r.date ? new Date(r.date).toLocaleDateString() : ''} · {timeSlotLabel(r.timeSlot)} · ₦{Number(r.amount).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '12px', marginTop: '4px', color: r.paymentStatus === 'paid' ? (colors.success || '#4caf50') : colors.accent }}>
+                  {r.paymentStatus === 'paid' ? '✓ Payment received' : r.paymentStatus === 'failed' ? 'Payment failed' : 'Payment pending'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

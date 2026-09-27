@@ -12,6 +12,13 @@ export async function verifyOrderPayment(orderId, reference) {
   return res.data;
 }
 
+// Admin/waiter only — marks a bank_transfer order as paid once the
+// transfer has actually been seen.
+export async function confirmBankTransferPayment(orderId) {
+  const res = await client.patch(`/orders/${orderId}/confirm-payment`);
+  return res.data;
+}
+
 export async function getOrders() {
   const res = await client.get('/orders');
   return res.data;

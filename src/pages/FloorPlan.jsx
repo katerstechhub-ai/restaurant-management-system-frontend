@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { getTables, assignWalkIn, addTable } from '../api/maleek';
+import { getTables, assignWalkIn, addTable, releaseTable } from '../api/maleek';
 import { PageTitle, Card, Button, Input, StatusPill, ErrorText } from '../components/ui';
 import { colors, radius, shadow } from '../styles/tokens';
 import { Users } from 'lucide-react';
@@ -20,6 +20,13 @@ function toTableArray(res) {
 
 const EMPTY_NEW_TABLE = { tableNumber: '', capacity: 2, x: 50, y: 50, shape: 'square' };
 
+// Reservations that expire on their own (the backend recomputes "reserved"
+// live from confirmed reservations every fetch) mean this page benefits
+// from a light auto-refresh, same pattern as Orders.jsx for customers —
+// otherwise a staff member watching this screen only sees a table flip
+// available/reserved/occupied after a manual reload.
+const REFRESH_INTERVAL_MS = 15000;
+
 export default function FloorPlan() {
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +43,9 @@ export default function FloorPlan() {
   const [addTableError, setAddTableError] = useState('');
   const [addingTable, setAddingTable] = useState(false);
 
+  // Release-in-progress tracking so the button can disable itself per table
+  const [releasingId, setReleasingId] = useState(null);
+
   const loadTables = async () => {
     try {
       const data = await getTables();
@@ -49,6 +59,8 @@ export default function FloorPlan() {
 
   useEffect(() => {
     loadTables();
+    const interval = setInterval(loadTables, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const handleWalkIn = async (e) => {
@@ -65,6 +77,19 @@ export default function FloorPlan() {
       loadTables();
     } catch (err) {
       setWalkInError(err.response?.data?.message || err.message || 'Failed to assign walk-in');
+    }
+  };
+
+  const handleRelease = async (tableId) => {
+    setReleasingId(tableId);
+    setError('');
+    try {
+      await releaseTable(tableId);
+      loadTables();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to release table');
+    } finally {
+      setReleasingId(null);
     }
   };
 
@@ -100,6 +125,7 @@ export default function FloorPlan() {
       case 'available': return '#4caf50';
       case 'reserved': return '#FFA800';
       case 'occupied': return '#E84A3B';
+      case 'unavailable': return colors.textMuted;
       default: return colors.textMuted;
     }
   };
@@ -148,6 +174,17 @@ export default function FloorPlan() {
               {table.status === 'available' && (
                 <Button variant="soft" style={{ marginTop: 'auto' }} onClick={() => setSelectedTable(table)}>
                   Assign Walk-In
+                </Button>
+              )}
+
+              {table.status === 'occupied' && (
+                <Button
+                  variant="soft"
+                  style={{ marginTop: 'auto' }}
+                  disabled={releasingId === table._id}
+                  onClick={() => handleRelease(table._id)}
+                >
+                  {releasingId === table._id ? 'Releasing…' : 'Release table'}
                 </Button>
               )}
             </div>
